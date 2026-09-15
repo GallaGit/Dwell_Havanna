@@ -1,9 +1,41 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPostBySlug, listPublishedPosts } from "@/lib/content";
+import { canonicalFor } from "@/lib/site";
 
 export const revalidate = 3600;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await getPostBySlug(slug);
+  if (!post) return {};
+  const url = canonicalFor(`/journal/${post.slug}`);
+  const title = `${post.title} — Dwell Havana`;
+  return {
+    title,
+    description: post.excerpt,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description: post.excerpt,
+      url,
+      type: "article",
+      images: [{ url: post.image, alt: post.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: post.excerpt,
+      images: [post.image],
+    },
+  };
+}
 
 export async function generateStaticParams() {
   const journalPosts = await listPublishedPosts();

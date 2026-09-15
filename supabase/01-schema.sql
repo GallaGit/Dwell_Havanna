@@ -78,6 +78,16 @@ create table if not exists syndications (
 create index if not exists syndications_slug_idx
   on syndications (post_type, post_slug);
 
+-- ── Defensa en profundidad ──
+-- Todo el acceso de la app va vía service_role (bypass RLS).
+-- Con RLS activado y SIN policies, anon/authenticated no leen ni escriben nada
+-- aunque una tabla quede expuesta en la Data API por error.
+alter table properties enable row level security;
+alter table journal_posts enable row level security;
+alter table verified_contributors enable row level security;
+alter table submissions enable row level security;
+alter table syndications enable row level security;
+
 -- ── Storage público para medios ──
 insert into storage.buckets (id, name, public)
 values ('dwell-media', 'dwell-media', true)

@@ -1,9 +1,41 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPropertyBySlug, listPublishedProperties } from "@/lib/content";
+import { canonicalFor } from "@/lib/site";
 
 export const revalidate = 3600;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const property = await getPropertyBySlug(slug);
+  if (!property) return {};
+  const url = canonicalFor(`/properties/${property.slug}`);
+  const title = `${property.name} — Dwell Havana`;
+  return {
+    title,
+    description: property.description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description: property.description,
+      url,
+      type: "article",
+      images: [{ url: property.cover, alt: property.name }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: property.description,
+      images: [property.cover],
+    },
+  };
+}
 
 export async function generateStaticParams() {
   const properties = await listPublishedProperties();
