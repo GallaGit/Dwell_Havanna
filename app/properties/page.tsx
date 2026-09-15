@@ -1,9 +1,11 @@
-import { properties } from "@/lib/data";
+import { listPublishedProperties } from "@/lib/content";
 import { PropertyEntry } from "@/components/Editorial";
 
 export const metadata = { title: "Properties — Dwell Havana" };
+export const revalidate = 3600;
 
-export default function PropertiesPage() {
+export default async function PropertiesPage() {
+  const properties = await listPublishedProperties();
   return (
     <div className="mx-auto max-w-[1400px] px-5 md:px-10 pt-10 md:pt-16 pb-10">
       <p className="meta-label mb-3">Properties — Editorial index</p>

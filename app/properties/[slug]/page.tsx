@@ -1,15 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProperty, properties } from "@/lib/data";
+import { getPropertyBySlug, listPublishedProperties } from "@/lib/content";
 
-export function generateStaticParams() {
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  const properties = await listPublishedProperties();
   return properties.map((p) => ({ slug: p.slug }));
 }
 
 export default async function PropertyDetail({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const property = getProperty(slug);
+  const property = await getPropertyBySlug(slug);
   if (!property) return notFound();
 
   return (

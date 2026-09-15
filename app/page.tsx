@@ -1,9 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
-import { properties, journalPosts } from "@/lib/data";
+import { listPublishedProperties, listPublishedPosts } from "@/lib/content";
 import { SectionHeading, PropertyEntry, JournalEntry } from "@/components/Editorial";
 
-export default function Home() {
+export const revalidate = 3600;
+
+export default async function Home() {
+  const [properties, journalPosts] = await Promise.all([
+    listPublishedProperties(),
+    listPublishedPosts(),
+  ]);
   const [featured, ...rest] = properties;
 
   return (

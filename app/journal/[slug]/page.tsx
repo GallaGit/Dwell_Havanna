@@ -1,15 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPost, journalPosts } from "@/lib/data";
+import { getPostBySlug, listPublishedPosts } from "@/lib/content";
 
-export function generateStaticParams() {
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  const journalPosts = await listPublishedPosts();
   return journalPosts.map((p) => ({ slug: p.slug }));
 }
 
 export default async function JournalDetail({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const post = getPost(slug);
+  const post = await getPostBySlug(slug);
   if (!post) return notFound();
 
   return (

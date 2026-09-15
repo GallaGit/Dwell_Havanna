@@ -1,9 +1,11 @@
-import { journalPosts } from "@/lib/data";
+import { listPublishedPosts } from "@/lib/content";
 import { JournalEntry } from "@/components/Editorial";
 
 export const metadata = { title: "Journal — Dwell Havana" };
+export const revalidate = 3600;
 
-export default function JournalPage() {
+export default async function JournalPage() {
+  const journalPosts = await listPublishedPosts();
   return (
     <div className="mx-auto max-w-[1400px] px-5 md:px-10 pt-10 md:pt-16">
       <p className="meta-label mb-3">Journal — Design authority</p>
