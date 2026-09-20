@@ -1,21 +1,15 @@
 import { randomUUID } from "crypto";
 import { getServiceClient } from "@/lib/db";
+import {
+  isJpeg,
+  sanitizeHandle,
+  validateSubmissionFields,
+} from "@/lib/submissions-validation.mjs";
 
 export const runtime = "nodejs";
 
-const MAX_BYTES = 8 * 1024 * 1024; // 8 MB — decisión de fotos Fase 1
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/jpg"]);
 const BUCKET = "dwell-media";
-
-function sanitizeHandle(handle: string): string {
-  return handle
-    .trim()
-    .replace(/^@/, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40);
-}
 
 /**
  * POST /api/submissions (multipart/form-data)
@@ -44,20 +38,33 @@ export async function POST(req: Request): Promise<Response> {
   const caption = String(form.get("caption") ?? "").trim().slice(0, 2000);
   const rights = String(form.get("rights") ?? "").toLowerCase();
   const photo = form.get("photo");
+  const bytes = photo instanceof File
+    ? Buffer.from(new Uint8Array(await photo.arrayBuffer()))
+    : Buffer.alloc(0);
+  const validationError = validateSubmissionFields({
+    handle: rawHandle,
+    caption,
+    rights,
+    photoSize: photo instanceof File ? photo.size : 0,
+    photoBytes: bytes,
+  });
 
-  if (!rawHandle || !caption) {
+  if (validationError === "handle_and_caption_required") {
     return Response.json(
       { ok: false, error: "handle_and_caption_required" },
       { status: 422 }
     );
   }
-  if (rights !== "true" && rights !== "on") {
+  if (validationError === "rights_required") {
     return Response.json(
       { ok: false, error: "rights_required" },
       { status: 422 }
     );
   }
-  if (!(photo instanceof File) || photo.size === 0) {
+  if (validationError === "photo_required") {
+    return Response.json({ ok: false, error: "photo_required" }, { status: 422 });
+  }
+  if (!(photo instanceof File)) {
     return Response.json({ ok: false, error: "photo_required" }, { status: 422 });
   }
   if (!ALLOWED_TYPES.has(photo.type.toLowerCase())) {
@@ -66,7 +73,7 @@ export async function POST(req: Request): Promise<Response> {
       { status: 422 }
     );
   }
-  if (photo.size > MAX_BYTES) {
+  if (validationError === "photo_too_large_8mb") {
     return Response.json(
       { ok: false, error: "photo_too_large_8mb" },
       { status: 422 }
@@ -88,7 +95,12 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const path = `submissions/${sanitizeHandle(handle)}/${randomUUID()}.jpg`;
-  const bytes = Buffer.from(await photo.arrayBuffer());
+  if (validationError === "photo_must_be_jpeg" || !isJpeg(bytes)) {
+    return Response.json(
+      { ok: false, error: "photo_must_be_jpeg" },
+      { status: 422 }
+    );
+  }
   const { error: uploadError } = await db.storage
     .from(BUCKET)
     .upload(path, bytes, { contentType: "image/jpeg", upsert: false });
