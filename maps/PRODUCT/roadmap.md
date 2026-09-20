@@ -89,7 +89,16 @@ Cambios actualmente presentes en el árbol de trabajo:
 - [x] Ejecutar `npm run lint`.
 - [x] Ejecutar `npm run build`.
 - [ ] Revisar visualmente home, property detail y journal detail en móvil y escritorio.
-- [ ] Mantener estos cambios separados de las tareas de producción hasta verificar que no degradan la calidad editorial.
+- [x] Mantener estos cambios separados de las tareas de producción hasta verificar que no degradan la calidad editorial.
+
+## Iteración: tests automatizados
+
+- [x] Añadir el script `npm test` con el runner nativo `node:test`.
+- [x] Cubrir normalización de handles.
+- [x] Cubrir JPEG válido y firma binaria inválida.
+- [x] Cubrir derechos obligatorios.
+- [x] Cubrir el límite de 8 MB.
+- [ ] Añadir pruebas HTTP end-to-end para `/api/submissions` cuando exista un entorno Supabase de prueba.
 
 ## Paso 2: activar Supabase y producción
 
