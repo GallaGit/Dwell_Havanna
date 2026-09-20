@@ -78,6 +78,35 @@ async function decide(formData: FormData): Promise<void> {
   revalidatePath("/admin/review");
 }
 
+async function inviteContributor(formData: FormData): Promise<void> {
+  "use server";
+  if (!(await isAuthed())) return;
+  const db = getServiceClient();
+  if (!db) return;
+
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const handle = String(formData.get("handle") ?? "").trim();
+  if (!email || !handle || !email.includes("@")) return;
+
+  const { data: contributor } = await db
+    .from("verified_contributors")
+    .select("handle")
+    .eq("handle", handle)
+    .maybeSingle();
+  if (!contributor) return;
+
+  const { data: invited, error: inviteError } = await db.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback?next=/contribuir`,
+  });
+  if (inviteError || !invited.user) return;
+
+  await db
+    .from("verified_contributors")
+    .update({ auth_user_id: invited.user.id })
+    .eq("handle", contributor.handle);
+  revalidatePath("/admin/review");
+}
+
 export default async function AdminReviewPage() {
   if (!process.env.ADMIN_TOKEN) {
     return (
@@ -147,6 +176,31 @@ export default async function AdminReviewPage() {
         antes de publicar. Rechazar lo descarta. Nada llega a redes sin pasar
         por aquí.
       </p>
+
+      <section className="mt-10 max-w-xl border-t rule pt-6">
+        <p className="meta-label mb-2">Invitar colaborador</p>
+        <p className="text-sm leading-6 text-charcoal/85 mb-4">
+          El handle debe existir previamente en la lista de colaboradores. No hay registro público.
+        </p>
+        <form action={inviteContributor} className="flex flex-col gap-3">
+          <input
+            name="handle"
+            required
+            placeholder="@arq.habana"
+            className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink"
+          />
+          <input
+            name="email"
+            required
+            type="email"
+            placeholder="email del colaborador"
+            className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink"
+          />
+          <button type="submit" className="w-fit text-sm bg-ink text-paper px-6 py-2.5 hover:opacity-80 transition">
+            Enviar invitación
+          </button>
+        </form>
+      </section>
 
       <div className="mt-10 flex flex-col gap-10">
         {pending.map((s) => (

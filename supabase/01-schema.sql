@@ -42,10 +42,13 @@ create table if not exists journal_posts (
 -- ── Colaboradores verificados (allowlist: nadie fuera de aquí puede enviar) ──
 create table if not exists verified_contributors (
   handle text primary key, -- ej. '@arq.habana'
+  auth_user_id uuid unique,
   display_name text,
   source text check (source in ('ig', 'fb', 'direct')),
   added_at timestamptz not null default now()
 );
+create index if not exists verified_contributors_auth_user_idx
+  on verified_contributors (auth_user_id);
 
 -- ── Inbox de ingesta (formulario + Fase 3 webhooks Meta) ──
 create table if not exists submissions (
