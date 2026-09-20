@@ -103,9 +103,102 @@ Cambios actualmente presentes en el árbol de trabajo:
 - [x] Añadir acceso por invitación en `/iniciar-sesion`; no existe registro público.
 - [ ] Configurar un proyecto Supabase de testing, sus keys publishable/service, una cuenta colaboradora invitada y `E2E_AUTH_COOKIE` para ejecutar el escenario autenticado del E2E.
 
+## Evolución de permisos editoriales
+
+Esta evolución reemplazará el uso compartido de `ADMIN_TOKEN` para cualquier persona que necesite permisos editoriales. `ADMIN_TOKEN` queda, de forma temporal, como acceso de emergencia para la propietaria hasta que exista el primer usuario `owner`.
+
+### Modelo decidido
+
+- [ ] Mantener `verified_contributors` para las identidades que pueden enviar contenido.
+- [ ] Crear identidades editoriales individuales con Supabase Auth.
+- [ ] Crear una tabla de miembros editoriales con roles `owner` y `moderator`.
+- [ ] Permitir que solo la propietaria otorgue, retire o cambie permisos.
+- [ ] Añadir un estado activo para revocar el acceso sin borrar el historial.
+- [ ] Registrar quién y cuándo ejecutó cada acción de moderación.
+- [ ] No usar `ADMIN_TOKEN` para moderadores.
+
+### Roles y permisos
+
+| Rol | Puede enviar | Puede revisar | Puede aprobar o rechazar | Puede invitar colaboradores | Puede gestionar permisos | Puede publicar |
+|---|---:|---:|---:|---:|---:|---:|
+| `contributor` | Sí | No | No | No | No | No |
+| `trusted_contributor` | Sí | No | No | No | No | No |
+| `moderator` | Opcional | Sí | Sí | No | No | No por defecto |
+| `owner` | Opcional | Sí | Sí | Sí | Sí | Sí |
+
+`trusted_contributor` no será un bypass de seguridad. La API seguirá exigiendo una sesión válida y el vínculo entre `auth_user_id` y `handle`.
+
+El permiso de confianza permitirá marcar el envío como aprobado automáticamente y crear un borrador de Journal. El borrador seguirá necesitando una acción editorial para publicarse. La publicación automática queda fuera de esta fase.
+
+### Orden obligatorio de implementación
+
+1. **Definir el modelo de permisos**
+   - Elegir los nombres finales de tablas, roles y acciones.
+   - Definir qué puede hacer cada rol.
+   - Confirmar que publicar y gestionar permisos quedan reservados a `owner`.
+
+2. **Crear el esquema de roles**
+   - Crear una migración para `editorial_members`.
+   - Añadir `role`, `active`, `display_name`, `created_at` y `updated_at`.
+   - Añadir el campo de confianza a `verified_contributors`.
+   - Crear `moderation_events` para la auditoría.
+   - Mantener RLS activo y usar el cliente de servicio solo desde el servidor.
+
+3. **Crear la autorización server-side**
+   - Crear una única función que obtenga el miembro editorial desde la sesión Supabase.
+   - Rechazar cuentas inexistentes o inactivas.
+   - Comprobar permisos en cada Server Action y Route Handler.
+   - No decidir permisos con `user_metadata`.
+
+4. **Migrar el acceso de la propietaria**
+   - Invitar la cuenta Supabase de la propietaria.
+   - Vincularla con el rol `owner`.
+   - Probar el acceso individual.
+   - Mantener `ADMIN_TOKEN` solo como fallback temporal.
+
+5. **Añadir moderadores**
+   - Permitir que `owner` invite moderadores.
+   - Permitir que `owner` active, desactive o cambie el rol de un miembro.
+   - Mostrar en el panel la identidad de la persona autenticada.
+   - Impedir que un moderador invite, desactive o eleve a otro moderador.
+
+6. **Migrar la cola de moderación**
+   - Proteger `/admin/review` con Supabase Auth y el rol editorial.
+   - Permitir a `moderator` aprobar y rechazar submissions.
+   - Guardar un evento de auditoría para cada decisión.
+   - Rechazar dos decisiones simultáneas sobre el mismo envío.
+
+7. **Añadir contribuidores de confianza**
+   - Permitir que `owner` otorgue o retire `trusted_contributor`.
+   - Mantener la validación de identidad y del handle.
+   - Crear automáticamente el borrador de Journal tras un envío válido.
+   - Mantener la publicación final bajo una acción editorial explícita.
+
+8. **Añadir pruebas y retirar el fallback**
+   - Cubrir cada rol y cada permiso negativo.
+   - Probar la revocación de una cuenta activa.
+   - Probar la auditoría de aprobaciones y rechazos.
+   - Probar el flujo de confianza sin publicación directa.
+   - Retirar `ADMIN_TOKEN` cuando el acceso `owner` individual esté verificado en producción.
+
+### Casos que deben quedar cubiertos
+
+- Un colaborador normal crea un envío `pending`.
+- Un contribuidor de confianza crea un borrador sin entrar en la cola normal.
+- Un moderador aprueba un envío y queda registrado como autor de la decisión.
+- Un moderador rechaza un envío y queda registrado como autor de la decisión.
+- Un moderador no puede invitar colaboradores.
+- Un moderador no puede cambiar permisos.
+- Un colaborador no puede abrir el panel editorial.
+- Una cuenta desactivada pierde el acceso aunque conserve una sesión anterior.
+- Un colaborador no puede enviar usando el handle de otra persona.
+- Ningún flujo de confianza publica directamente durante esta fase.
+
 ## Paso 2: activar Supabase y producción
 
 Requiere credenciales y acciones fuera del repositorio.
+
+Este paso activa el modelo actual de Fase 1. La migración a cuentas editoriales individuales se ejecuta después de validar la aplicación base y antes de retirar `ADMIN_TOKEN`.
 
 - [ ] Confirmar el proyecto Supabase de producción.
 - [ ] Configurar `NEXT_PUBLIC_SITE_URL` con el dominio real.
@@ -237,5 +330,6 @@ Acciones de la dueña de las cuentas, antes de implementar la API.
 - `docs/Tech/02-estructura-carpetas.md`
 - `docs/Tech/03-frontend-rutas-render.md`
 - `docs/Tech/04-backend-datos-supabase.md`
-- `docs/Tech/05-flujos-editoriales.md`
+- `docs/PRODUCT/05-flujos-editoriales.md`
 - `docs/Tech/06-config-operacion.md`
+- `docs/PRODUCT/07-guia-acceso-colaboradores.md`
