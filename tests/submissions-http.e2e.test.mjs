@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { createClient } from "@supabase/supabase-js";
 
@@ -60,7 +61,8 @@ test("POST /api/submissions validates and persists a submission over HTTP", {
     process.env.E2E_SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
-  const server = spawn("npm", ["run", "dev", "--", "--hostname", "127.0.0.1", "--port", "3100"], {
+  const nextBin = fileURLToPath(new URL("../node_modules/next/dist/bin/next", import.meta.url));
+  const server = spawn(process.execPath, [nextBin, "dev", "--hostname", "127.0.0.1", "--port", "3100"], {
     env: {
       ...process.env,
       NEXT_PUBLIC_SUPABASE_URL: process.env.E2E_SUPABASE_URL,
