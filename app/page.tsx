@@ -28,6 +28,8 @@ export default async function Home() {
               width={2200}
               height={1050}
               priority
+              quality={70}
+              sizes="(max-width: 640px) calc(100vw - 40px), (max-width: 768px) calc(100vw - 80px), min(1400px, calc(100vw - 80px))"
               className="h-full w-full object-cover"
             />
           </div>
@@ -65,7 +67,7 @@ export default async function Home() {
             {journalPosts.slice(1, 3).map((post) => (
               <Link key={post.slug} href={`/journal/${post.slug}`} className="group grid grid-cols-12 gap-4 border-t rule pt-5">
                 <div className="col-span-4 img-editorial aspect-square">
-                  <Image src={post.image} alt={post.title} width={400} height={400} className="h-full w-full object-cover" />
+                  <Image src={post.image} alt={post.title} width={400} height={400} quality={70} sizes="(max-width: 768px) 33vw, 140px" className="h-full w-full object-cover" />
                 </div>
                 <div className="col-span-8">
                   <p className="meta-label mb-1">{post.category}</p>
@@ -101,6 +103,8 @@ export default async function Home() {
               alt="Patio house Havana"
               width={1600}
               height={1000}
+              quality={70}
+              sizes="(max-width: 768px) calc(100vw - 40px), min(930px, 67vw)"
               className="h-full w-full object-cover"
             />
           </div>
@@ -126,13 +130,13 @@ export default async function Home() {
         <div className="editorial-grid">
           <div className="col-span-6 md:col-span-3">
             <div className="img-editorial aspect-[3/4]">
-              <Image src="https://images.unsplash.com/photo-1503174971373-b1f69850bded?q=80&w=800&auto=format&fit=crop" alt="Havana detail" width={800} height={1066} className="h-full w-full object-cover" />
+              <Image src="https://images.unsplash.com/photo-1503174971373-b1f69850bded?q=80&w=800&auto=format&fit=crop" alt="Havana detail" width={800} height={1066} quality={70} sizes="(max-width: 768px) 50vw, 25vw" className="h-full w-full object-cover" />
             </div>
             <p className="meta-label mt-3">Texture — Lime and time</p>
           </div>
           <div className="col-span-6 md:col-span-5 md:mt-16">
             <div className="img-editorial aspect-[4/3]">
-              <Image src="https://images.unsplash.com/photo-1536500152107-01ab1422f932?q=80&w=1200&auto=format&fit=crop" alt="Havana street life" width={1200} height={900} className="h-full w-full object-cover" />
+              <Image src="https://images.unsplash.com/photo-1536500152107-01ab1422f932?q=80&w=1200&auto=format&fit=crop" alt="Havana street life" width={1200} height={900} quality={70} sizes="(max-width: 768px) 50vw, 42vw" className="h-full w-full object-cover" />
             </div>
             <p className="meta-label mt-3">Context — Street as room</p>
           </div>

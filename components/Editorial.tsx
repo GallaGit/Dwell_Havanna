@@ -44,6 +44,8 @@ export function PropertyEntry({ property, large = false }: { property: Property;
           alt={property.name}
           width={1400}
           height={1050}
+          quality={70}
+          sizes="(max-width: 768px) calc(100vw - 40px), 50vw"
           className="h-full w-full object-cover"
         />
       </div>
@@ -76,6 +78,8 @@ export function JournalEntry({ post }: { post: JournalPost }) {
           alt={post.title}
           width={1200}
           height={800}
+          quality={70}
+          sizes="(max-width: 640px) calc(100vw - 40px), (max-width: 1024px) 50vw, 58vw"
           className="h-full w-full object-cover"
         />
       </div>

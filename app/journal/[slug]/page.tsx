@@ -53,7 +53,7 @@ export default async function JournalDetail({ params }: { params: Promise<{ slug
       <h1 className="font-display text-4xl md:text-6xl leading-[1.02] max-w-4xl">{post.title}</h1>
       <p className="mt-5 max-w-xl text-[15px] leading-8 text-charcoal/85">{post.excerpt}</p>
       <div className="img-editorial mt-10 aspect-[16/9]">
-        <Image src={post.image} alt={post.title} width={2000} height={1125} className="h-full w-full object-cover" />
+        <Image src={post.image} alt={post.title} width={2000} height={1125} priority quality={70} sizes="100vw" className="h-full w-full object-cover" />
       </div>
       <div className="editorial-grid mt-10">
         <div className="col-span-12 md:col-span-6 md:col-start-4 prose-editorial text-[15px]">

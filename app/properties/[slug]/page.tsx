@@ -51,7 +51,7 @@ export default async function PropertyDetail({ params }: { params: Promise<{ slu
     <article>
       {/* 1 hero */}
       <div className="img-editorial aspect-[3/4] sm:aspect-[16/9] md:aspect-[21/9]">
-        <Image src={property.cover} alt={property.name} width={2400} height={1100} priority className="h-full w-full object-cover" />
+        <Image src={property.cover} alt={property.name} width={2400} height={1100} priority quality={70} sizes="100vw" className="h-full w-full object-cover" />
       </div>
 
       <div className="mx-auto max-w-[1400px] px-5 md:px-10">
@@ -74,7 +74,7 @@ export default async function PropertyDetail({ params }: { params: Promise<{ slu
         <div className="editorial-grid mt-12 md:mt-16">
           {property.images.slice(1).map((src, i) => (
             <div key={src} className={`img-editorial ${i === 0 ? "col-span-12 md:col-span-7 aspect-[4/3]" : "col-span-12 md:col-span-5 aspect-[4/3] md:mt-16"}`}>
-              <Image src={src} alt={`${property.name} — ${i + 2}`} width={1400} height={1050} className="h-full w-full object-cover" />
+              <Image src={src} alt={`${property.name} — ${i + 2}`} width={1400} height={1050} quality={70} sizes="(max-width: 768px) calc(100vw - 40px), 50vw" className="h-full w-full object-cover" />
             </div>
           ))}
         </div>
