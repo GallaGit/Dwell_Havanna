@@ -101,7 +101,9 @@ Cambios actualmente presentes en el árbol de trabajo:
 - [x] Añadir una prueba HTTP end-to-end opt-in para `/api/submissions`, con limpieza de datos y archivos temporales.
 - [x] Proteger submissions con sesión Supabase Auth y vínculo `auth_user_id` en `verified_contributors`.
 - [x] Añadir acceso por invitación en `/iniciar-sesion`; no existe registro público.
-- [ ] Configurar un proyecto Supabase de testing, sus keys publishable/service, una cuenta colaboradora invitada y `E2E_AUTH_COOKIE` para ejecutar el escenario autenticado del E2E.
+- [x] Configurar un proyecto Supabase de testing, sus keys publishable/service, una cuenta colaboradora invitada y `E2E_AUTH_COOKIE` para ejecutar el escenario autenticado del E2E.
+- [x] Aplicar las migraciones de permisos editoriales `03` y `04` en testing.
+- [ ] Crear el primer miembro editorial `owner` en testing y validar el flujo completo.
 
 ## Paso 2: activar Supabase y producción
 
@@ -120,6 +122,10 @@ Requiere credenciales y acciones fuera del repositorio.
 - [ ] Confirmar que el bucket `dwell-media` está configurado.
 - [ ] Desplegar la aplicación.
 - [ ] Confirmar que ninguna variable secreta se expone al navegador.
+
+La migración `supabase/04-editorial-permissions.sql` crea `editorial_members` y
+`moderation_events`. Debe ejecutarse después de `03-contributor-auth.sql`; el primer
+usuario editorial debe vincularse manualmente como `owner` con su `auth_user_id`.
 
 ## Paso 3: repetir el E2E en producción
 

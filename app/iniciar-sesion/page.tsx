@@ -19,10 +19,12 @@ export default function SignInPage() {
       return;
     }
 
+    const requestedNext = new URLSearchParams(window.location.search).get("next");
+    const next = requestedNext?.startsWith("/") ? requestedNext : "/contribuir";
     const { error: authError } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/contribuir`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
         shouldCreateUser: false,
       },
     });

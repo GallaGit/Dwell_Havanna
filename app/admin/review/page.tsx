@@ -2,17 +2,11 @@ import Image from "next/image";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getServiceClient } from "@/lib/db";
+import { canInvite, canReview, getEditorialAccess, type EditorialAccess } from "@/lib/editorial-auth";
 
 export const runtime = "nodejs";
 
 const COOKIE = "dh_admin";
-
-async function isAuthed(): Promise<boolean> {
-  const token = process.env.ADMIN_TOKEN;
-  if (!token) return false;
-  const store = await cookies();
-  return store.get(COOKIE)?.value === token;
-}
 
 async function login(formData: FormData): Promise<void> {
   "use server";
@@ -30,6 +24,22 @@ async function login(formData: FormData): Promise<void> {
   revalidatePath("/admin/review");
 }
 
+async function recordModerationEvent(
+  db: NonNullable<ReturnType<typeof getServiceClient>>,
+  access: EditorialAccess,
+  action: "invite_contributor" | "approve_submission" | "reject_submission",
+  details: { submissionId?: string; targetHandle?: string; metadata?: Record<string, string> },
+): Promise<void> {
+  await db.from("moderation_events").insert({
+    actor_user_id: access.kind === "member" ? access.member.auth_user_id : null,
+    actor_source: access.kind === "member" ? "auth" : "legacy_admin",
+    action,
+    submission_id: details.submissionId ?? null,
+    target_handle: details.targetHandle ?? null,
+    metadata: details.metadata ?? {},
+  });
+}
+
 type Submission = {
   id: string;
   author_handle: string;
@@ -41,7 +51,8 @@ type Submission = {
 
 async function decide(formData: FormData): Promise<void> {
   "use server";
-  if (!(await isAuthed())) return;
+  const access = await getEditorialAccess();
+  if (!canReview(access) || !access) return;
   const db = getServiceClient();
   if (!db) return;
 
@@ -50,7 +61,16 @@ async function decide(formData: FormData): Promise<void> {
   if (!id) return;
 
   if (action === "reject") {
-    await db.from("submissions").update({ status: "rejected" }).eq("id", id);
+    const { data: rejected } = await db
+      .from("submissions")
+      .update({ status: "rejected" })
+      .eq("id", id)
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
+    if (rejected) {
+      await recordModerationEvent(db, access, "reject_submission", { submissionId: id });
+    }
   } else if (action === "approve") {
     const { data: sub } = await db
       .from("submissions")
@@ -63,7 +83,7 @@ async function decide(formData: FormData): Promise<void> {
     const firstLine =
       sub.caption_raw.split("\n").find((l: string) => l.trim()) ?? "";
     const slug = `community-${sub.id.slice(0, 8)}`;
-    await db.from("journal_posts").insert({
+    const { error: draftError } = await db.from("journal_posts").insert({
       slug,
       title: firstLine.slice(0, 90) || "Envío de la comunidad",
       category: "Community",
@@ -73,14 +93,25 @@ async function decide(formData: FormData): Promise<void> {
       reading_time: "3 min",
       status: "review",
     });
-    await db.from("submissions").update({ status: "approved" }).eq("id", id);
+    if (draftError) return;
+    const { data: approved } = await db
+      .from("submissions")
+      .update({ status: "approved" })
+      .eq("id", id)
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
+    if (approved) {
+      await recordModerationEvent(db, access, "approve_submission", { submissionId: id });
+    }
   }
   revalidatePath("/admin/review");
 }
 
 async function inviteContributor(formData: FormData): Promise<void> {
   "use server";
-  if (!(await isAuthed())) return;
+  const access = await getEditorialAccess();
+  if (!canInvite(access) || !access) return;
   const db = getServiceClient();
   if (!db) return;
 
@@ -100,46 +131,51 @@ async function inviteContributor(formData: FormData): Promise<void> {
   });
   if (inviteError || !invited.user) return;
 
-  await db
+  const { error: linkError } = await db
     .from("verified_contributors")
     .update({ auth_user_id: invited.user.id })
     .eq("handle", contributor.handle);
+  if (linkError) return;
+  await recordModerationEvent(db, access, "invite_contributor", {
+    targetHandle: contributor.handle,
+    metadata: { email_domain: email.split("@")[1] ?? "unknown" },
+  });
   revalidatePath("/admin/review");
 }
 
 export default async function AdminReviewPage() {
-  if (!process.env.ADMIN_TOKEN) {
-    return (
-      <div className="mx-auto max-w-[1400px] px-5 md:px-10 pt-16">
-        <p className="meta-label mb-3">Admin</p>
-        <h1 className="font-display text-4xl">Panel deshabilitado</h1>
-        <p className="mt-4 max-w-xl text-[15px] leading-7 text-charcoal/85">
-          Configura ADMIN_TOKEN en el entorno para activar la revisión.
-        </p>
-      </div>
-    );
-  }
-
-  if (!(await isAuthed())) {
+  const access = await getEditorialAccess();
+  if (!access) {
     return (
       <div className="mx-auto max-w-[1400px] px-5 md:px-10 pt-16 pb-16">
         <p className="meta-label mb-3">Admin — Acceso restringido</p>
         <h1 className="font-display text-4xl mb-8">Revisión editorial</h1>
-        <form action={login} className="max-w-sm flex flex-col gap-4">
-          <input
-            name="token"
-            type="password"
-            required
-            placeholder="Token de editora"
-            className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink"
-          />
-          <button
-            type="submit"
-            className="w-fit text-sm bg-ink text-paper px-7 py-3 hover:opacity-80 transition"
-          >
-            Entrar
-          </button>
-        </form>
+        <p className="max-w-xl text-[15px] leading-7 text-charcoal/85">
+          Inicia sesión con una cuenta editorial invitada. El acceso de emergencia
+          por token sigue disponible mientras se completa la migración.
+        </p>
+        <div className="mt-8 flex flex-col gap-4 max-w-sm">
+          <a href="/iniciar-sesion?next=/admin/review" className="w-fit text-sm bg-ink text-paper px-7 py-3 hover:opacity-80 transition">
+            Iniciar sesión editorial
+          </a>
+          {process.env.ADMIN_TOKEN && (
+            <form action={login} className="flex flex-col gap-4 border-t rule pt-6">
+              <input
+                name="token"
+                type="password"
+                required
+                placeholder="Token de emergencia"
+                className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink"
+              />
+              <button
+                type="submit"
+                className="w-fit text-sm border border-ink px-7 py-3 hover:bg-ink hover:text-paper transition-colors"
+              >
+                Usar acceso de emergencia
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     );
   }
@@ -177,30 +213,32 @@ export default async function AdminReviewPage() {
         por aquí.
       </p>
 
-      <section className="mt-10 max-w-xl border-t rule pt-6">
-        <p className="meta-label mb-2">Invitar colaborador</p>
-        <p className="text-sm leading-6 text-charcoal/85 mb-4">
-          El handle debe existir previamente en la lista de colaboradores. No hay registro público.
-        </p>
-        <form action={inviteContributor} className="flex flex-col gap-3">
-          <input
-            name="handle"
-            required
-            placeholder="@arq.habana"
-            className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink"
-          />
-          <input
-            name="email"
-            required
-            type="email"
-            placeholder="email del colaborador"
-            className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink"
-          />
-          <button type="submit" className="w-fit text-sm bg-ink text-paper px-6 py-2.5 hover:opacity-80 transition">
-            Enviar invitación
-          </button>
-        </form>
-      </section>
+       {canInvite(access) && (
+         <section className="mt-10 max-w-xl border-t rule pt-6">
+           <p className="meta-label mb-2">Invitar colaborador</p>
+           <p className="text-sm leading-6 text-charcoal/85 mb-4">
+             El handle debe existir previamente en la lista de colaboradores. No hay registro público.
+           </p>
+           <form action={inviteContributor} className="flex flex-col gap-3">
+             <input
+               name="handle"
+               required
+               placeholder="@arq.habana"
+               className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink"
+             />
+             <input
+               name="email"
+               required
+               type="email"
+               placeholder="email del colaborador"
+               className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink"
+             />
+             <button type="submit" className="w-fit text-sm bg-ink text-paper px-6 py-2.5 hover:opacity-80 transition">
+               Enviar invitación
+             </button>
+           </form>
+         </section>
+       )}
 
       <div className="mt-10 flex flex-col gap-10">
         {pending.map((s) => (
