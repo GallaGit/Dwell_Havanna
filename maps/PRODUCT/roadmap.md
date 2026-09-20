@@ -98,7 +98,10 @@ Cambios actualmente presentes en el árbol de trabajo:
 - [x] Cubrir JPEG válido y firma binaria inválida.
 - [x] Cubrir derechos obligatorios.
 - [x] Cubrir el límite de 8 MB.
-- [ ] Añadir pruebas HTTP end-to-end para `/api/submissions` cuando exista un entorno Supabase de prueba.
+- [x] Añadir una prueba HTTP end-to-end opt-in para `/api/submissions`, con limpieza de datos y archivos temporales.
+- [x] Proteger submissions con sesión Supabase Auth y vínculo `auth_user_id` en `verified_contributors`.
+- [x] Añadir acceso por invitación en `/iniciar-sesion`; no existe registro público.
+- [ ] Configurar un proyecto Supabase de testing, sus keys publishable/service, una cuenta colaboradora invitada y `E2E_AUTH_COOKIE` para ejecutar el escenario autenticado del E2E.
 
 ## Paso 2: activar Supabase y producción
 
@@ -113,6 +116,7 @@ Requiere credenciales y acciones fuera del repositorio.
 - [ ] Ejecutar `supabase/01-schema.sql` en Supabase SQL Editor.
 - [ ] Ejecutar `supabase/02-seed.sql` en Supabase SQL Editor.
 - [ ] Registrar colaboradores en `verified_contributors`.
+- [ ] Invitar colaboradores mediante `/admin/review` y comprobar el vínculo Auth ↔ `verified_contributors`.
 - [ ] Confirmar que el bucket `dwell-media` está configurado.
 - [ ] Desplegar la aplicación.
 - [ ] Confirmar que ninguna variable secreta se expone al navegador.

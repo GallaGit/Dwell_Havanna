@@ -16,7 +16,9 @@ const FRIENDLY: Record<string, string> = {
   photo_must_be_jpeg: "Solo JPEG (.jpg). Convierte la foto e inténtalo de nuevo.",
   photo_too_large_8mb: "La foto supera 8 MB. Reduce su tamaño e inténtalo de nuevo.",
   unknown_contributor:
-    "Ese handle no está en la lista de colaboradores verificados. Escríbenos para darte de alta.",
+    "Tu cuenta no está asociada a ese colaborador. Escríbenos para revisar tu invitación.",
+  authentication_required: "Inicia sesión con tu invitación antes de enviar.",
+  auth_not_configured: "El acceso de colaboradores no está activo todavía.",
   db_not_configured: "El buzón no está activo todavía. Inténtalo más tarde.",
   upload_failed: "Falló la subida. Revisa tu conexión e inténtalo de nuevo.",
   save_failed: "No pudimos guardar tu envío. Inténtalo de nuevo.",
@@ -61,6 +63,12 @@ export default function ContribuirPage() {
         automáticamente: si se aprueba, aparece primero en la web y desde ahí
         se comparte a nuestras redes con tu crédito.
       </p>
+      <p className="mt-4 max-w-xl text-[15px] leading-7 text-charcoal/85">
+        Solo colaboradores invitados pueden enviar. Si aún no tienes acceso, escribe al equipo editorial.
+      </p>
+      <Link href="/iniciar-sesion" className="inline-block mt-4 text-sm underline underline-offset-4">
+        Entrar con mi invitación
+      </Link>
 
       <form
         onSubmit={onSubmit}

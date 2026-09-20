@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { getServiceClient } from "@/lib/db";
+import { getSupabaseServerClient } from "@/lib/supabase-server";
 import {
   isJpeg,
   sanitizeHandle,
@@ -24,6 +25,15 @@ export async function POST(req: Request): Promise<Response> {
       { ok: false, error: "db_not_configured" },
       { status: 503 }
     );
+  }
+
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) {
+    return Response.json({ ok: false, error: "auth_not_configured" }, { status: 503 });
+  }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return Response.json({ ok: false, error: "authentication_required" }, { status: 401 });
   }
 
   let form: FormData;
@@ -85,6 +95,7 @@ export async function POST(req: Request): Promise<Response> {
   const { data: contributor } = await db
     .from("verified_contributors")
     .select("handle")
+    .eq("auth_user_id", user.id)
     .ilike("handle", handle)
     .maybeSingle();
   if (!contributor) {
