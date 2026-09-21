@@ -1,25 +1,17 @@
 import { getServiceClient } from "@/lib/db";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
+import {
+  canInvite,
+  canManageMembers,
+  canReview,
+  getActiveEditorialAccess,
+  type EditorialAccess,
+  type EditorialMember,
+  type EditorialRole,
+} from "@/lib/editorial-permissions";
 import { cookies } from "next/headers";
 
-export type EditorialRole = "owner" | "moderator";
-
-export type EditorialMember = {
-  auth_user_id: string;
-  role: EditorialRole;
-  active: boolean;
-  display_name: string | null;
-};
-
-export type EditorialAccess =
-  | { kind: "member"; member: EditorialMember }
-  | { kind: "legacy"; member: null };
-
 const LEGACY_COOKIE = "dh_admin";
-
-function isEditorialRole(value: unknown): value is EditorialRole {
-  return value === "owner" || value === "moderator";
-}
 
 export async function getEditorialAccess(): Promise<EditorialAccess | null> {
   const supabase = await getSupabaseServerClient();
@@ -36,9 +28,8 @@ export async function getEditorialAccess(): Promise<EditorialAccess | null> {
         .eq("active", true)
         .maybeSingle();
 
-      if (member && isEditorialRole(member.role) && member.active === true) {
-        return { kind: "member", member: member as EditorialMember };
-      }
+      const access = getActiveEditorialAccess(member);
+      if (access) return access;
     }
   }
 
@@ -50,10 +41,5 @@ export async function getEditorialAccess(): Promise<EditorialAccess | null> {
     : null;
 }
 
-export function canReview(access: EditorialAccess | null): boolean {
-  return access !== null;
-}
-
-export function canInvite(access: EditorialAccess | null): boolean {
-  return access?.kind === "legacy" || access?.member.role === "owner";
-}
+export { canInvite, canManageMembers, canReview };
+export type { EditorialAccess, EditorialMember, EditorialRole };

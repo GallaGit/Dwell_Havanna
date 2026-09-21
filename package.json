@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test tests/submissions-validation.test.mjs tests/submissions-http.e2e.test.mjs"
+    "test:editorial-auth": "node --experimental-strip-types --test tests/editorial-permissions.test.mjs",
+    "test": "node --experimental-strip-types --test tests/editorial-permissions.test.mjs tests/submissions-validation.test.mjs tests/submissions-http.e2e.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
