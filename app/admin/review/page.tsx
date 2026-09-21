@@ -2,7 +2,14 @@ import Image from "next/image";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getServiceClient } from "@/lib/db";
-import { canInvite, canReview, getEditorialAccess, type EditorialAccess } from "@/lib/editorial-auth";
+import {
+  canInvite,
+  canManageMembers,
+  canReview,
+  getEditorialAccess,
+  type EditorialAccess,
+  type EditorialMember,
+} from "@/lib/editorial-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +36,13 @@ async function login(formData: FormData): Promise<void> {
 async function recordModerationEvent(
   db: NonNullable<ReturnType<typeof getServiceClient>>,
   access: EditorialAccess,
-  action: "invite_contributor" | "approve_submission" | "reject_submission",
+  action:
+    | "invite_contributor"
+    | "approve_submission"
+    | "reject_submission"
+    | "invite_editorial_member"
+    | "change_editorial_role"
+    | "change_editorial_status",
   details: { submissionId?: string; targetHandle?: string; metadata?: Record<string, string> },
 ): Promise<void> {
   await db.from("moderation_events").insert({
@@ -145,6 +158,114 @@ async function inviteContributor(formData: FormData): Promise<void> {
   revalidatePath("/admin/review");
 }
 
+async function manageEditorialMember(formData: FormData): Promise<void> {
+  "use server";
+  const access = await getEditorialAccess();
+  if (!canManageMembers(access) || access?.kind !== "member" || access.member.role !== "owner") return;
+  const db = getServiceClient();
+  if (!db) return;
+
+  const operation = String(formData.get("operation") ?? "");
+  const targetUserId = String(formData.get("auth_user_id") ?? "").trim();
+  if (!targetUserId || targetUserId === access.member.auth_user_id) return;
+
+  if (operation === "role") {
+    const role = String(formData.get("role") ?? "");
+    if (role !== "owner" && role !== "moderator") return;
+
+    if (role === "moderator") {
+      const { count } = await db
+        .from("editorial_members")
+        .select("auth_user_id", { count: "exact", head: true })
+        .eq("role", "owner")
+        .eq("active", true);
+      const { data: target } = await db
+        .from("editorial_members")
+        .select("role,active")
+        .eq("auth_user_id", targetUserId)
+        .maybeSingle();
+      if (target?.role === "owner" && target.active === true && (count ?? 0) <= 1) return;
+    }
+
+    const { data: changed } = await db
+      .from("editorial_members")
+      .update({ role })
+      .eq("auth_user_id", targetUserId)
+      .select("auth_user_id")
+      .maybeSingle();
+    if (changed) {
+      await recordModerationEvent(db, access, "change_editorial_role", {
+        metadata: { target_user_id: targetUserId, role },
+      });
+    }
+  } else if (operation === "status") {
+    const active = String(formData.get("active") ?? "") === "true";
+    if (!active) {
+      const { data: target } = await db
+        .from("editorial_members")
+        .select("role,active")
+        .eq("auth_user_id", targetUserId)
+        .maybeSingle();
+      if (target?.role === "owner" && target.active === true) {
+        const { count } = await db
+          .from("editorial_members")
+          .select("auth_user_id", { count: "exact", head: true })
+          .eq("role", "owner")
+          .eq("active", true);
+        if ((count ?? 0) <= 1) return;
+      }
+    }
+
+    const { data: changed } = await db
+      .from("editorial_members")
+      .update({ active })
+      .eq("auth_user_id", targetUserId)
+      .select("auth_user_id")
+      .maybeSingle();
+    if (changed) {
+      await recordModerationEvent(db, access, "change_editorial_status", {
+        metadata: { target_user_id: targetUserId, active: String(active) },
+      });
+    }
+  }
+  revalidatePath("/admin/review");
+}
+
+async function inviteEditorialMember(formData: FormData): Promise<void> {
+  "use server";
+  const access = await getEditorialAccess();
+  if (!canManageMembers(access) || access?.kind !== "member" || access.member.role !== "owner") return;
+  const db = getServiceClient();
+  if (!db) return;
+
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const role = String(formData.get("role") ?? "moderator");
+  const displayName = String(formData.get("display_name") ?? "").trim().slice(0, 120);
+  if (!email || !email.includes("@") || (role !== "owner" && role !== "moderator")) return;
+
+  const { data: invited, error } = await db.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback?next=/admin/review`,
+  });
+  if (error || !invited.user) return;
+
+  const { data: member, error: memberError } = await db
+    .from("editorial_members")
+    .insert({
+      auth_user_id: invited.user.id,
+      role,
+      active: true,
+      display_name: displayName || null,
+    })
+    .select("auth_user_id")
+    .maybeSingle();
+  if (memberError || !member) return;
+
+  await recordModerationEvent(db, access, "invite_editorial_member", {
+    metadata: { target_user_id: invited.user.id, email_domain: email.split("@")[1] ?? "unknown", role },
+  });
+  revalidatePath("/admin/review");
+}
+
 export default async function AdminReviewPage() {
   const access = await getEditorialAccess();
   if (!access) {
@@ -203,6 +324,12 @@ export default async function AdminReviewPage() {
     .eq("status", "pending")
     .order("created_at", { ascending: true });
   const pending = (data ?? []) as Submission[];
+  const ownerAccess = access.kind === "member" && access.member.role === "owner" ? access : null;
+  const { data: memberData } = await db
+    .from("editorial_members")
+    .select("auth_user_id,role,active,display_name")
+    .order("created_at", { ascending: true });
+  const members = (memberData ?? []) as EditorialMember[];
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 md:px-10 pt-10 md:pt-16 pb-16">
@@ -243,6 +370,50 @@ export default async function AdminReviewPage() {
            </form>
          </section>
        )}
+
+      {canManageMembers(ownerAccess) && ownerAccess && (
+        <section className="mt-10 max-w-3xl border-t rule pt-6">
+          <p className="meta-label mb-2">Equipo editorial</p>
+          <p className="text-sm leading-6 text-charcoal/85 mb-4">
+            Solo las cuentas owner pueden invitar, cambiar roles o desactivar acceso. Siempre debe quedar un owner activo.
+          </p>
+          <form action={inviteEditorialMember} className="grid gap-3 md:grid-cols-4">
+            <input name="display_name" placeholder="Nombre" className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink" />
+            <input name="email" required type="email" placeholder="email editorial" className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink" />
+            <select name="role" defaultValue="moderator" className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink">
+              <option value="moderator">Moderator</option>
+              <option value="owner">Owner</option>
+            </select>
+            <button type="submit" className="text-sm bg-ink text-paper px-6 py-2.5 hover:opacity-80 transition">Invitar al equipo</button>
+          </form>
+          <div className="mt-6 flex flex-col gap-3">
+            {members.map((member) => (
+              <div key={member.auth_user_id} className="border-t rule pt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm">{member.display_name || "Sin nombre"}</p>
+                  <p className="meta-label">{member.role} · {member.active ? "Activo" : "Inactivo"}</p>
+                </div>
+                {member.auth_user_id !== ownerAccess.member.auth_user_id && (
+                  <div className="flex flex-wrap gap-2">
+                    <form action={manageEditorialMember}>
+                      <input type="hidden" name="operation" value="role" />
+                      <input type="hidden" name="auth_user_id" value={member.auth_user_id} />
+                      <input type="hidden" name="role" value={member.role === "owner" ? "moderator" : "owner"} />
+                      <button type="submit" className="text-xs border border-ink px-3 py-2 hover:bg-ink hover:text-paper transition-colors">Cambiar a {member.role === "owner" ? "moderator" : "owner"}</button>
+                    </form>
+                    <form action={manageEditorialMember}>
+                      <input type="hidden" name="operation" value="status" />
+                      <input type="hidden" name="auth_user_id" value={member.auth_user_id} />
+                      <input type="hidden" name="active" value={String(!member.active)} />
+                      <button type="submit" className="text-xs border border-ink px-3 py-2 hover:bg-ink hover:text-paper transition-colors">{member.active ? "Desactivar" : "Activar"}</button>
+                    </form>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="mt-10 flex flex-col gap-10">
         {pending.map((s) => (
