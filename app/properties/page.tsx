@@ -1,5 +1,5 @@
 import { listPublishedProperties } from "@/lib/content";
-import { PropertyEntry } from "@/components/Editorial";
+import PropertyFilters from "./PropertyFilters";
 
 export const metadata = { title: "Properties — Dwell Havana" };
 export const revalidate = 3600;
@@ -17,21 +17,7 @@ export default async function PropertiesPage() {
         description. Minimal filters — curation over database.
       </p>
 
-      <div className="mt-12 flex gap-6 border-y rule py-3">
-        {["All", "Miramar", "Vedado", "Centro"].map((f, i) => (
-          <span key={f} className={`text-[13px] ${i === 0 ? "underline underline-offset-4" : "text-muted"}`}>
-            {f}
-          </span>
-        ))}
-      </div>
-
-      <div className="editorial-grid mt-12">
-        {properties.map((p, i) => (
-          <div key={p.slug} className={`col-span-12 md:col-span-6 ${i === 1 ? "md:mt-20" : ""} ${i === 2 ? "md:col-start-4" : ""}`}>
-            <PropertyEntry property={p} />
-          </div>
-        ))}
-      </div>
+      <PropertyFilters properties={properties} />
     </div>
   );
 }

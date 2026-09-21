@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-paper text-ink">
+      <body className="min-h-full flex flex-col bg-paper text-ink [--mobile-nav-side:max(24px,env(safe-area-inset-right))] [--mobile-nav-bottom:max(24px,env(safe-area-inset-bottom))]">
         <SiteHeader />
         <main className="flex-1">{children}</main>
         <SiteFooter />
