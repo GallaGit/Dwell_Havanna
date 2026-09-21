@@ -89,9 +89,9 @@ Cuando el colaborador envía una foto, el envío aparece en `/admin/review` con 
 La editora puede:
 
 - Rechazar el envío.
-- Aprobarlo para crear un borrador de Journal.
+- Aprobarlo para publicarlo en Journal.
 
-Aprobar un envío no lo publica directamente. La editora debe revisar y publicar el borrador por separado.
+Antes de cada decisión, el panel pide confirmación. Aprobar cambia el envío a `approved`, crea una entrada `journal_posts` con estado `published` y la hace visible en el Journal. Rechazar cambia el envío a `rejected` y lo retira de la cola pendiente.
 
 ## Para el colaborador
 
@@ -126,7 +126,24 @@ En `/contribuir` completa estos campos:
 
 Selecciona el botón de envío después de revisar los datos.
 
-La aplicación guarda el contenido como `pending`. El contenido no aparece en la web hasta que la editora lo revise y publique.
+La aplicación guarda el contenido como `pending`. El contenido no aparece en la web hasta que la editora lo revise y confirme su publicación.
+
+## Correcciones y retiro de contenido
+
+Esta capacidad queda fuera del hito actual. La aplicación todavía no permite que un colaborador vea, edite, retire o elimine sus envíos desde el sitio.
+
+La política prevista para una fase posterior es la siguiente:
+
+- Un colaborador podrá editar el texto, reemplazar la imagen o retirar un envío mientras esté `pending`.
+- Un colaborador podrá corregir y reenviar un envío `rejected`.
+- Un colaborador podrá solicitar una corrección o el retiro de un envío `approved` o publicado.
+- Un colaborador no podrá editar directamente contenido aprobado o publicado.
+- Un `moderator` o `owner` decidirá si reabre, corrige, retira o restaura el contenido.
+- El sistema conservará el historial y evitará el borrado físico como operación normal.
+
+Los estados previstos para ese flujo son `change_requested`, `withdrawal_requested`, `withdrawn` y `unpublished`. Estos estados no existen todavía en la base de datos.
+
+Las solicitudes deberán registrar quién las creó, cuándo se crearon y qué envío afectan. La implementación también deberá registrar en `moderation_events` las decisiones editoriales relacionadas.
 
 ## Cómo se valida el acceso
 

@@ -57,7 +57,7 @@ Este documento reúne el trabajo hecho, los pasos de activación y las fases sig
 - [x] Limpiar archivos huérfanos cuando falla el insert.
 - [x] Crear `/admin/review`.
 - [x] Proteger el panel con `ADMIN_TOKEN` y cookie `dh_admin`.
-- [x] Aprobar submissions como borradores de Journal.
+- [x] Aprobar submissions y publicarlas en Journal después de una confirmación editorial.
 - [x] Rechazar submissions sin publicarlas.
 - [x] Mantener la revisión humana como requisito editorial.
 - [x] Completar una prueba end-to-end y limpiar sus datos de prueba.
@@ -104,7 +104,8 @@ Cambios actualmente presentes en el árbol de trabajo:
 - [x] Configurar un proyecto Supabase de testing, sus keys publishable/service, una cuenta colaboradora invitada y `E2E_AUTH_COOKIE` para ejecutar el escenario autenticado del E2E.
 - [x] Aplicar las migraciones de permisos editoriales `03` y `04` en testing.
 - [x] Aplicar la migración de gestión de miembros editoriales `20260921000300` en testing.
-- [ ] Crear el primer miembro editorial `owner` en testing y validar el flujo completo. El usuario existente de E2E es un colaborador y no debe recibir el rol editorial.
+- [x] Crear el primer miembro editorial `owner` en testing sin promover al usuario existente de E2E.
+- [ ] Validar en navegador el flujo completo de aprobación, publicación y rechazo.
 
 ## Evolución de permisos editoriales
 
@@ -183,6 +184,17 @@ El permiso de confianza permitirá marcar el envío como aprobado automáticamen
    - Probar la auditoría de aprobaciones y rechazos.
    - Probar el flujo de confianza sin publicación directa.
    - Retirar `ADMIN_TOKEN` cuando el acceso `owner` individual esté verificado en producción.
+
+### Correcciones y retiro solicitados por contribuidores
+
+- [ ] Permitir que un colaborador vea sus propios envíos.
+- [ ] Permitir editar y retirar envíos `pending` sin borrar el historial.
+- [ ] Permitir corregir y reenviar envíos `rejected`.
+- [ ] Permitir solicitar correcciones o retiro para contenido `approved` o publicado.
+- [ ] Añadir una nota de moderación y el registro de la decisión editorial.
+- [ ] Definir estados `change_requested`, `withdrawal_requested`, `withdrawn` y `unpublished`.
+- [ ] Registrar ediciones, reenvíos, retiros, restauraciones y despublicaciones en `moderation_events`.
+- [ ] Mantener el borrado físico como excepción administrativa o legal.
 
 ### Casos que deben quedar cubiertos
 

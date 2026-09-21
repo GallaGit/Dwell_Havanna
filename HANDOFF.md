@@ -18,13 +18,15 @@ Testing has the base schema and seed data, plus these migrations applied:
 
 - `20260921000100_contributor_auth.sql`
 - `20260921000200_editorial_permissions.sql`
+- `20260921000300_editorial_member_management.sql`
 
 Verified in testing:
 
 - `verified_contributors.auth_user_id` exists.
 - `editorial_members` exists.
 - `moderation_events` exists.
-- `editorial_members` currently has zero rows. The existing Auth user is the E2E contributor and must not be promoted to `owner`.
+- The testing account `ociel.galla@gmail.com` is linked to `@ociel.galla` and has the active `owner` role.
+- The E2E contributor remains a separate account and must not be promoted to `owner`.
 
 Production has the base tables, but it was missing
 `verified_contributors.auth_user_id`, `editorial_members`, and
@@ -46,29 +48,35 @@ until the testing flow has been validated.
 - `supabase/03-contributor-auth.sql` and `supabase/04-editorial-permissions.sql` remain readable SQL references.
 - The E2E runner uses the Node executable to start Next on Windows.
 - Supabase CLI `2.117.0` is a pinned dev dependency.
+- `/admin/review` now asks for confirmation before approving or rejecting a submission.
+- Approval creates `journal_posts.status='published'` and revalidates `/`, `/journal`, and the approved journal detail route.
+- Approved community posts therefore appear in the public Journal after the editorial decision.
+- `app/admin/review/ModerationDecision.tsx` contains the client-side confirmation dialog; authorization and mutations remain server-side.
 
 ## Next session
 
-1. Review the mobile navigation together in a real mobile viewport and confirm the final circle size, icon weight, and spacing.
-2. Create or identify a testing Auth user separate from the E2E contributor for the editorial owner.
-3. Insert that user into `editorial_members` with role `owner`.
-4. Test editorial login, review actions, invitation permissions, and audit rows.
-5. Add a moderator test user if needed.
-6. Only after testing passes, apply the contributor-auth and editorial-permissions migrations to production.
+1. Run a manual browser check of `/admin/review` with the testing owner account.
+2. Submit a test contribution, confirm the approval dialog, and verify the post at `/journal`.
+3. Confirm rejection removes the submission from the pending queue and creates its audit event.
+4. Add a moderator test user and verify that the moderator cannot manage editorial members.
+5. Review the mobile navigation in a real mobile viewport.
+6. Apply the migrations to production only after the testing flow passes.
 
 ## Verification already completed
 
 - `npm run lint`
 - `npm run build`
-- `npm test` with testing environment loaded: 6 passing tests.
+- `npm test`: 9 passing tests and 1 skipped opt-in HTTP E2E test because its `E2E_*` variables are not configured in this session.
 - `npm run test:editorial-auth` runs the role policy tests without starting Next.js or reusing development-server state. It covers owner, moderator, inactive/malformed members, null access, and the temporary legacy fallback.
 - Editorial member management is owner-only: owners can invite, change roles, and activate/deactivate other members; moderators and the legacy token cannot manage permissions. The server rejects self-management and removing the final active owner.
+- Contributor corrections and withdrawal requests are documented as a future phase only. The current app does not let contributors edit, withdraw, or delete submissions.
 - `node --env-file=.env.local --test tests/submissions-http.e2e.test.mjs`: 1 passing authenticated HTTP E2E test.
 - Testing REST checks for the new column and tables: successful.
-- Testing Auth currently has one user, linked to `@e2e-contributor`; `editorial_members` has zero rows. Do not promote that user to `owner`.
+- Testing has a separate active owner account linked to `@ociel.galla`; the E2E contributor remains separate.
 - Future Auth UX: after a user accepts an invitation, show a welcome message on the callback destination. This is documented as a follow-up and is not implemented in the current test flow.
-- Temporary editorial accounts for the permissions test were removed after testing. The testing project has zero users for `ociel.galla@gmail.com` and `ociel5996@gmail.com`, and `editorial_members` has zero rows.
-- The temporary `owner` request reached `/admin/review` and displayed the editorial queue and invitation form. The complete `moderator` and inactive-account HTTP assertions remain blocked by the current dev-server test harness, which reused stale page or session state during role transitions. Direct Supabase checks confirmed that `owner -> moderator -> inactive` updates work and cleanup completed.
+- The owner account reached `/admin/review` and displayed the editorial queue, invitation form, and member-management controls.
+- Complete browser assertions for moderator and inactive-account transitions remain pending because the current dev-server harness reused stale page or session state during role transitions.
+- Direct Supabase checks confirmed that `owner -> moderator -> inactive` updates work and cleanup completed for the temporary role-transition test.
 
 Never commit `.env.local`, Supabase access tokens, database passwords, service
 keys, or E2E cookies.

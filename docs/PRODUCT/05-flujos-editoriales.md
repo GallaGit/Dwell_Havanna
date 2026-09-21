@@ -17,10 +17,12 @@ Fuente: `site/app/contribuir/page.tsx`, `site/app/api/submissions/route.ts`, `si
 
 1. `getEditorialAccess()`: obtiene el usuario mediante Supabase Auth y busca un miembro activo en `editorial_members`. Si no hay miembro, acepta temporalmente la cookie `dh_admin` cuando `ADMIN_TOKEN` está configurado.
 2. Lista `pending order created_at asc` con foto + `author_handle/source/fecha` + texto.
-3. `decide`: `reject → status='rejected'`; `approve → insert journal_posts {slug: community-<8primeros id>, title: primera línea ≤90, category: 'Community', excerpt: ≤220, image, date_label: 'Borrador — revisión', reading_time: '3 min', status: 'review'}` + `submissions → approved`.
+3. `decide`: `reject → status='rejected'`; `approve → insert journal_posts {slug: community-<8primeros id>, title: primera línea ≤90, category: 'Community', excerpt: ≤220, image, date_label: mes y año, reading_time: '3 min', status: 'published', published_at: now}` + `submissions → approved`.
 4. Cada aprobación o rechazo escribe un evento en `moderation_events`. La condición `status='pending'` evita procesar dos decisiones sobre el mismo envío.
-5. Invitar (`inviteContributor`) requiere `owner` o el fallback temporal; el usuario elige un handle existente y un email. `auth.admin.inviteUserByEmail` crea la cuenta invitada y guarda `auth_user_id`.
-6. Estados vacíos: sin acceso → login editorial y, si existe, formulario de token temporal; sin DB → "Sin base de datos".
+5. La interfaz pide confirmación antes de enviar cada decisión. El diálogo informa que aprobar publica el contenido y que rechazar lo retira de la cola.
+6. Tras aprobar, el servidor revalida `/`, `/journal`, `/journal/<slug>` y `/admin/review`.
+7. Invitar (`inviteContributor`) requiere `owner` o el fallback temporal; el usuario elige un handle existente y un email. `auth.admin.inviteUserByEmail` crea la cuenta invitada y guarda `auth_user_id`.
+8. Estados vacíos: sin acceso → login editorial y, si existe, formulario de token temporal; sin DB → "Sin base de datos".
 
 Los `owner` pueden gestionar el equipo editorial desde el mismo panel: invitar
 cuentas `owner` o `moderator`, cambiar roles y activar o desactivar miembros.
@@ -28,7 +30,7 @@ Estas acciones se autorizan server-side, se registran en `moderation_events` y
 no permiten modificar la propia cuenta ni dejar el sistema sin un `owner` activo.
 Los `moderator` y el fallback `ADMIN_TOKEN` no pueden gestionar permisos.
 
-Regla: aprobar **nunca publica directo**; los envíos de comunidad van a Journal, Properties solo los crea la editora.
+Regla: aprobar publica directamente el envío de comunidad en Journal después de la confirmación editorial. Properties solo los crea la editora.
 
 ## 3. Evolución de permisos editoriales
 
@@ -47,7 +49,58 @@ El roadmap define el orden de migración en `docs/PRODUCT/roadmap.md`, sección 
 
 La tabla `moderation_events` guarda la cuenta, la acción, el envío afectado y la fecha de cada decisión de moderación. En testing, la tabla existe y RLS no expone filas mediante la clave publishable.
 
-## 4. Sindicación pull (web → terceros, Fase 1 hecha)
+## 4. Correcciones, retiro y eliminación solicitada
+
+Este flujo está documentado para una fase posterior. No está implementado en el esquema, la API ni la interfaz actuales.
+
+### Envíos pendientes
+
+El colaborador podrá ver sus propios envíos con estado `pending`, editar el texto, reemplazar la imagen o retirar el envío antes de la revisión.
+
+El retiro no debe borrar la fila ni el archivo de forma inmediata. El sistema debe conservar el registro para la auditoría y usar un estado como `withdrawn` o `cancelled`.
+
+### Envíos rechazados
+
+El colaborador podrá ver el motivo del rechazo, corregir el texto o la imagen y reenviar el envío a la cola como `pending`.
+
+La moderación necesitará un campo de nota, como `moderator_note`, para explicar la corrección solicitada.
+
+### Envíos aprobados o publicados
+
+El colaborador no editará directamente un envío aprobado o publicado. Podrá solicitar una corrección o el retiro del contenido.
+
+El equipo editorial decidirá si reabre el envío, actualiza el borrador, retira el contenido o mantiene la publicación.
+
+Una solicitud de retiro debe conservar el historial. El flujo previsto es `published → withdrawal_requested → unpublished`.
+
+### Permisos previstos
+
+| Rol | Ver propios envíos | Editar `pending` | Corregir `rejected` | Solicitar retiro | Aprobar o retirar |
+|---|---:|---:|---:|---:|---:|
+| `contributor` | Sí | Sí | Sí | Sí | No |
+| `moderator` | No aplica | No aplica | No aplica | No aplica | Sí, según la política editorial |
+| `owner` | No aplica | No aplica | No aplica | No aplica | Sí |
+
+El colaborador no podrá editar contenido aprobado ni borrar publicaciones directamente. `moderator` y `owner` conservarán la decisión final.
+
+### Modelo de datos pendiente
+
+La implementación futura deberá evaluar estos estados adicionales para `submissions`:
+
+```text
+change_requested
+withdrawal_requested
+withdrawn
+unpublished
+```
+
+También deberá evaluar `updated_at`, `moderator_note`, `reviewed_by`, `reviewed_at` y `withdrawn_at`.
+
+Las acciones de edición, reenvío, retiro, restauración y despublicación deberán quedar registradas en `moderation_events`.
+
+El borrado físico quedará reservado para solicitudes administrativas o legales. El flujo normal usará estados para conservar el historial.
+
+## 5. Sindicación pull (web → terceros, Fase 1 hecha)
 
 | Pieza | Archivo | Detalle |
 |---|---|---|
