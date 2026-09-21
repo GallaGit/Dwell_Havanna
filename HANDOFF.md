@@ -41,6 +41,8 @@ until the testing flow has been validated.
 - Contact CTAs use `mailto:hola@dwellhavana.example`.
 - `/admin/review` is not protected by URL obscurity: the route is reachable, but the queue and actions require editorial Auth or the temporary token. The token cookie expires after seven days by default and is configurable with `ADMIN_TOKEN_TTL_SECONDS`.
 - `supabase/migrations/` contains the formal `03` and `04` migrations.
+- `supabase/migrations/20260921000300_editorial_member_management.sql` extends audit actions for owner-managed editorial members.
+- `20260921000300_editorial_member_management.sql` is applied in `Dwell_Havanna_Testing`; production has not been modified.
 - `supabase/03-contributor-auth.sql` and `supabase/04-editorial-permissions.sql` remain readable SQL references.
 - The E2E runner uses the Node executable to start Next on Windows.
 - Supabase CLI `2.117.0` is a pinned dev dependency.
@@ -59,6 +61,8 @@ until the testing flow has been validated.
 - `npm run lint`
 - `npm run build`
 - `npm test` with testing environment loaded: 6 passing tests.
+- `npm run test:editorial-auth` runs the role policy tests without starting Next.js or reusing development-server state. It covers owner, moderator, inactive/malformed members, null access, and the temporary legacy fallback.
+- Editorial member management is owner-only: owners can invite, change roles, and activate/deactivate other members; moderators and the legacy token cannot manage permissions. The server rejects self-management and removing the final active owner.
 - `node --env-file=.env.local --test tests/submissions-http.e2e.test.mjs`: 1 passing authenticated HTTP E2E test.
 - Testing REST checks for the new column and tables: successful.
 - Testing Auth currently has one user, linked to `@e2e-contributor`; `editorial_members` has zero rows. Do not promote that user to `owner`.

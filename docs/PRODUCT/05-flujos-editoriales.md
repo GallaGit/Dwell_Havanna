@@ -22,6 +22,12 @@ Fuente: `site/app/contribuir/page.tsx`, `site/app/api/submissions/route.ts`, `si
 5. Invitar (`inviteContributor`) requiere `owner` o el fallback temporal; el usuario elige un handle existente y un email. `auth.admin.inviteUserByEmail` crea la cuenta invitada y guarda `auth_user_id`.
 6. Estados vacíos: sin acceso → login editorial y, si existe, formulario de token temporal; sin DB → "Sin base de datos".
 
+Los `owner` pueden gestionar el equipo editorial desde el mismo panel: invitar
+cuentas `owner` o `moderator`, cambiar roles y activar o desactivar miembros.
+Estas acciones se autorizan server-side, se registran en `moderation_events` y
+no permiten modificar la propia cuenta ni dejar el sistema sin un `owner` activo.
+Los `moderator` y el fallback `ADMIN_TOKEN` no pueden gestionar permisos.
+
 Regla: aprobar **nunca publica directo**; los envíos de comunidad van a Journal, Properties solo los crea la editora.
 
 ## 3. Evolución de permisos editoriales

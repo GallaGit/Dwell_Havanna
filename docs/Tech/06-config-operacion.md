@@ -44,6 +44,13 @@ Verificación Fase 1: `lint ✓` + `build ✓`.
 9. Validar `/iniciar-sesion?next=/admin/review`, una decisión de moderación y su fila en `moderation_events`.
 10. Validar: Meta Sharing Debugger (1 property + 1 journal) + `/feed.xml` + `/sitemap.xml` en producción.
 
+La política de autorización editorial puede verificarse sin levantar Next.js ni
+reutilizar cookies o estado del servidor de desarrollo con:
+
+```bash
+npm run test:editorial-auth
+```
+
 ## Seguridad mínima
 
 - `service_role` y `ADMIN_TOKEN` jamás salen del servidor (`lib/db.ts` y admin son server-only). La publishable key sí puede llegar al navegador.

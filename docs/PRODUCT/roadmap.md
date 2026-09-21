@@ -103,6 +103,7 @@ Cambios actualmente presentes en el árbol de trabajo:
 - [x] Añadir acceso por invitación en `/iniciar-sesion`; no existe registro público.
 - [x] Configurar un proyecto Supabase de testing, sus keys publishable/service, una cuenta colaboradora invitada y `E2E_AUTH_COOKIE` para ejecutar el escenario autenticado del E2E.
 - [x] Aplicar las migraciones de permisos editoriales `03` y `04` en testing.
+- [x] Aplicar la migración de gestión de miembros editoriales `20260921000300` en testing.
 - [ ] Crear el primer miembro editorial `owner` en testing y validar el flujo completo. El usuario existente de E2E es un colaborador y no debe recibir el rol editorial.
 
 ## Evolución de permisos editoriales
@@ -114,7 +115,7 @@ Esta evolución reemplazará el uso compartido de `ADMIN_TOKEN` para cualquier p
 - [x] Mantener `verified_contributors` para las identidades que pueden enviar contenido.
 - [x] Crear identidades editoriales individuales con Supabase Auth.
 - [x] Crear una tabla de miembros editoriales con roles `owner` y `moderator`.
-- [ ] Permitir que solo la propietaria otorgue, retire o cambie permisos.
+- [x] Permitir que solo la propietaria otorgue, retire o cambie permisos desde `/admin/review`.
 - [x] Añadir un estado activo para revocar el acceso sin borrar el historial.
 - [x] Registrar quién y cuándo ejecutó cada acción de moderación.
 - [x] No usar `ADMIN_TOKEN` para moderadores. El token solo queda como fallback temporal.
@@ -159,10 +160,10 @@ El permiso de confianza permitirá marcar el envío como aprobado automáticamen
    - [x] Mantener `ADMIN_TOKEN` solo como fallback temporal.
 
 5. **Añadir moderadores**
-   - Permitir que `owner` invite moderadores.
-   - Permitir que `owner` active, desactive o cambie el rol de un miembro.
-   - Mostrar en el panel la identidad de la persona autenticada.
-   - Impedir que un moderador invite, desactive o eleve a otro moderador.
+   - [x] Permitir que `owner` invite moderadores.
+   - [x] Permitir que `owner` active, desactive o cambie el rol de un miembro.
+   - [ ] Mostrar en el panel la identidad de la persona autenticada.
+   - [x] Impedir que un moderador invite, desactive o eleve a otro moderador.
 
 6. **Migrar la cola de moderación**
    - [x] Proteger `/admin/review` con Supabase Auth y el rol editorial, manteniendo el fallback temporal.
