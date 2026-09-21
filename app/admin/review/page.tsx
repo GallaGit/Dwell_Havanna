@@ -5,6 +5,7 @@ import { getServiceClient } from "@/lib/db";
 import { canInvite, canReview, getEditorialAccess, type EditorialAccess } from "@/lib/editorial-auth";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const COOKIE = "dh_admin";
 
@@ -14,11 +15,12 @@ async function login(formData: FormData): Promise<void> {
   const given = String(formData.get("token") ?? "");
   if (token && given === token) {
     const store = await cookies();
+    const ttlSeconds = Number(process.env.ADMIN_TOKEN_TTL_SECONDS ?? 60 * 60 * 24 * 7);
     store.set(COOKIE, token, {
       httpOnly: true,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: Number.isFinite(ttlSeconds) && ttlSeconds > 0 ? ttlSeconds : 60 * 60 * 24 * 7,
     });
   }
   revalidatePath("/admin/review");
@@ -151,8 +153,10 @@ export default async function AdminReviewPage() {
         <p className="meta-label mb-3">Admin — Acceso restringido</p>
         <h1 className="font-display text-4xl mb-8">Revisión editorial</h1>
         <p className="max-w-xl text-[15px] leading-7 text-charcoal/85">
-          Inicia sesión con una cuenta editorial invitada. El acceso de emergencia
-          por token sigue disponible mientras se completa la migración.
+           Esta ruta puede abrirse con la URL, pero no muestra la cola ni permite acciones
+           sin una cuenta editorial autorizada. Inicia sesión con una cuenta editorial
+           invitada. El token de emergencia tiene una expiración configurable y solo es
+           un fallback temporal mientras se completa la migración.
         </p>
         <div className="mt-8 flex flex-col gap-4 max-w-sm">
           <a href="/iniciar-sesion?next=/admin/review" className="w-fit text-sm bg-ink text-paper px-7 py-3 hover:opacity-80 transition">
@@ -164,7 +168,7 @@ export default async function AdminReviewPage() {
                 name="token"
                 type="password"
                 required
-                placeholder="Token de emergencia"
+                 placeholder="Emergency token"
                 className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink"
               />
               <button
