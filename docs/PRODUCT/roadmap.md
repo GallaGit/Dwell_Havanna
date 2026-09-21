@@ -1,6 +1,6 @@
 # Dwell Havana roadmap
 
-Estado actualizado: 2026-09-20
+Estado actualizado: 2026-09-21
 
 Este documento reúne el trabajo hecho, los pasos de activación y las fases siguientes. Las casillas marcadas reflejan el estado documentado en `docs/Idea/Fase-1-Cierre.md` y en `docs/Tech/`.
 
@@ -103,21 +103,21 @@ Cambios actualmente presentes en el árbol de trabajo:
 - [x] Añadir acceso por invitación en `/iniciar-sesion`; no existe registro público.
 - [x] Configurar un proyecto Supabase de testing, sus keys publishable/service, una cuenta colaboradora invitada y `E2E_AUTH_COOKIE` para ejecutar el escenario autenticado del E2E.
 - [x] Aplicar las migraciones de permisos editoriales `03` y `04` en testing.
-- [ ] Crear el primer miembro editorial `owner` en testing y validar el flujo completo.
+- [ ] Crear el primer miembro editorial `owner` en testing y validar el flujo completo. El usuario existente de E2E es un colaborador y no debe recibir el rol editorial.
 
 ## Evolución de permisos editoriales
 
 Esta evolución reemplazará el uso compartido de `ADMIN_TOKEN` para cualquier persona que necesite permisos editoriales. `ADMIN_TOKEN` queda, de forma temporal, como acceso de emergencia para la propietaria hasta que exista el primer usuario `owner`.
 
-### Modelo decidido
+### Modelo decidido y base implementada
 
-- [ ] Mantener `verified_contributors` para las identidades que pueden enviar contenido.
-- [ ] Crear identidades editoriales individuales con Supabase Auth.
-- [ ] Crear una tabla de miembros editoriales con roles `owner` y `moderator`.
+- [x] Mantener `verified_contributors` para las identidades que pueden enviar contenido.
+- [x] Crear identidades editoriales individuales con Supabase Auth.
+- [x] Crear una tabla de miembros editoriales con roles `owner` y `moderator`.
 - [ ] Permitir que solo la propietaria otorgue, retire o cambie permisos.
-- [ ] Añadir un estado activo para revocar el acceso sin borrar el historial.
-- [ ] Registrar quién y cuándo ejecutó cada acción de moderación.
-- [ ] No usar `ADMIN_TOKEN` para moderadores.
+- [x] Añadir un estado activo para revocar el acceso sin borrar el historial.
+- [x] Registrar quién y cuándo ejecutó cada acción de moderación.
+- [x] No usar `ADMIN_TOKEN` para moderadores. El token solo queda como fallback temporal.
 
 ### Roles y permisos
 
@@ -135,28 +135,28 @@ El permiso de confianza permitirá marcar el envío como aprobado automáticamen
 ### Orden obligatorio de implementación
 
 1. **Definir el modelo de permisos**
-   - Elegir los nombres finales de tablas, roles y acciones.
-   - Definir qué puede hacer cada rol.
-   - Confirmar que publicar y gestionar permisos quedan reservados a `owner`.
+   - [x] Elegir los nombres finales de tablas, roles y acciones.
+   - [x] Definir qué puede hacer cada rol.
+   - [x] Confirmar que publicar y gestionar permisos quedan reservados a `owner`.
 
 2. **Crear el esquema de roles**
-   - Crear una migración para `editorial_members`.
-   - Añadir `role`, `active`, `display_name`, `created_at` y `updated_at`.
-   - Añadir el campo de confianza a `verified_contributors`.
-   - Crear `moderation_events` para la auditoría.
-   - Mantener RLS activo y usar el cliente de servicio solo desde el servidor.
+   - [x] Crear una migración para `editorial_members`.
+   - [x] Añadir `role`, `active`, `display_name`, `created_at` y `updated_at`.
+   - [ ] Añadir el campo de confianza a `verified_contributors`.
+   - [x] Crear `moderation_events` para la auditoría.
+   - [x] Mantener RLS activo y usar el cliente de servicio solo desde el servidor.
 
 3. **Crear la autorización server-side**
-   - Crear una única función que obtenga el miembro editorial desde la sesión Supabase.
-   - Rechazar cuentas inexistentes o inactivas.
-   - Comprobar permisos en cada Server Action y Route Handler.
-   - No decidir permisos con `user_metadata`.
+   - [x] Crear una única función que obtenga el miembro editorial desde la sesión Supabase.
+   - [x] Rechazar cuentas inexistentes o inactivas.
+   - [x] Comprobar permisos en cada Server Action y Route Handler implementado.
+   - [x] No decidir permisos con `user_metadata`.
 
 4. **Migrar el acceso de la propietaria**
-   - Invitar la cuenta Supabase de la propietaria.
-   - Vincularla con el rol `owner`.
-   - Probar el acceso individual.
-   - Mantener `ADMIN_TOKEN` solo como fallback temporal.
+   - [ ] Invitar la cuenta Supabase de la propietaria.
+   - [ ] Vincularla con el rol `owner`.
+   - [ ] Probar el acceso individual.
+   - [x] Mantener `ADMIN_TOKEN` solo como fallback temporal.
 
 5. **Añadir moderadores**
    - Permitir que `owner` invite moderadores.
@@ -165,10 +165,10 @@ El permiso de confianza permitirá marcar el envío como aprobado automáticamen
    - Impedir que un moderador invite, desactive o eleve a otro moderador.
 
 6. **Migrar la cola de moderación**
-   - Proteger `/admin/review` con Supabase Auth y el rol editorial.
-   - Permitir a `moderator` aprobar y rechazar submissions.
-   - Guardar un evento de auditoría para cada decisión.
-   - Rechazar dos decisiones simultáneas sobre el mismo envío.
+   - [x] Proteger `/admin/review` con Supabase Auth y el rol editorial, manteniendo el fallback temporal.
+   - [x] Permitir a `moderator` aprobar y rechazar submissions.
+   - [x] Guardar un evento de auditoría para cada decisión.
+   - [x] Rechazar dos decisiones simultáneas sobre el mismo envío mediante la condición `status='pending'`.
 
 7. **Añadir contribuidores de confianza**
    - Permitir que `owner` otorgue o retire `trusted_contributor`.
@@ -314,6 +314,26 @@ Acciones de la dueña de las cuentas, antes de implementar la API.
 - [ ] Mantener allowlist de colaboradores.
 - [ ] Evitar URLs firmadas que Meta no pueda leer durante la publicación.
 - [ ] Mantener la web como URL canónica para evitar duplicación SEO.
+
+## Estado de validación local y de testing
+
+- `npm run lint` pasa.
+- `npm run build` pasa y genera 21 rutas con el estado actual de la aplicación.
+- `npm test` pasa con 6 pruebas cuando se cargan las variables del proyecto de testing.
+- El E2E valida autenticación requerida, derechos obligatorios, colaborador desconocido, submission válida, persistencia y limpieza.
+- RLS no devuelve filas a la clave publishable para `editorial_members`, `moderation_events` ni `verified_contributors`.
+- Testing tiene las migraciones `20260921000100_contributor_auth.sql` y `20260921000200_editorial_permissions.sql` aplicadas.
+- Testing todavía no tiene filas en `editorial_members`.
+- El usuario existente de testing está vinculado al colaborador E2E y no se elevará a `owner`.
+
+Para completar el siguiente paso, identifica una cuenta editorial separada, crea o invita esa cuenta en Supabase Auth y registra su UUID como `owner`:
+
+```sql
+insert into editorial_members (auth_user_id, role, display_name)
+values ('<auth-user-uuid>', 'owner', '<nombre editorial>');
+```
+
+Después valida `/iniciar-sesion?next=/admin/review`, la cola de moderación y los registros de `moderation_events` con esa cuenta.
 
 ## Orden de ejecución
 

@@ -29,6 +29,14 @@ Aplicar en SQL Editor: `01` luego `02`.
 | `submissions` | `id uuid` | `author_handle FK`, `image_url`, `caption_raw`, `source form/ig/fb`, `external_id unique`, `rights_granted bool`, `status pending/approved/rejected` |
 | `syndications` | `id uuid` | `post_type property/journal`, `post_slug`, `target fb/ig/partner:*`, `external_id/url`, `status queued/published/failed`, índice `(post_type, post_slug)` |
 
+Las migraciones `supabase/migrations/20260921000100_contributor_auth.sql` y
+`supabase/migrations/20260921000200_editorial_permissions.sql` añaden el vínculo
+con Supabase Auth, `editorial_members` y `moderation_events`. El servidor consulta
+el miembro activo con `auth_user_id`, `role` y `active`; no usa `user_metadata`.
+
+Testing tiene ambas migraciones aplicadas. `editorial_members` todavía no tiene
+filas porque falta registrar una cuenta editorial separada del usuario E2E.
+
 Seguridad: `RLS enabled` en las 5 tablas **sin policies** → `anon/authenticated` no leen nada; las operaciones privilegiadas van por `service_role`. La API valida además la sesión Supabase Auth y el vínculo `auth_user_id`. Storage: bucket `dwell-media` público-lectura (`policy select where bucket_id='dwell-media'`), escritura solo `service_role`.
 
 ## Seed (`site/supabase/02-seed.sql`)

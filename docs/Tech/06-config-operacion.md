@@ -16,6 +16,7 @@ Copiar `site/.env.example` → `site/.env.local` (gitignoreado, nunca commitear)
 | `SUPABASE_SERVICE_ROLE_KEY` | **No, solo server** | `site/lib/db.ts`, API submissions, admin e invitaciones |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sí, publishable | Supabase Auth en navegador y cookies SSR |
 | `ADMIN_TOKEN` | **No, solo server** | `site/app/admin/review/page.tsx` (cookie `dh_admin`) |
+| `ADMIN_TOKEN_TTL_SECONDS` | **No, solo server** | Duración de la cookie fallback; default 7 días |
 
 > Nota: `docs/Idea/Fase-1-Cierre.md §4` cita `NEXT_PUBLIC_SUPABASE_ANON_KEY`; el `.env.example` actual usa `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (nuevo formato Supabase). Manda el `.env.example`.
 
@@ -38,8 +39,10 @@ Verificación Fase 1: `lint ✓` + `build ✓`.
 4. Desde `/admin/review`, invitar el email del colaborador usando el handle existente.
 5. El colaborador abre el enlace recibido en `/iniciar-sesion`; no existe registro público.
 6. Probar: `/contribuir` → enviar → `/admin/review` → aprobar → ver borrador en DB.
-5. Fijar `NEXT_PUBLIC_SITE_URL` al dominio real antes de compartir.
-6. Validar: Meta Sharing Debugger (1 property + 1 journal) + `/feed.xml` + `/sitemap.xml` en producción.
+7. Fijar `NEXT_PUBLIC_SITE_URL` al dominio real antes de compartir.
+8. Para el acceso editorial, crear una cuenta Supabase separada del usuario E2E e insertarla como `owner` en `editorial_members`.
+9. Validar `/iniciar-sesion?next=/admin/review`, una decisión de moderación y su fila en `moderation_events`.
+10. Validar: Meta Sharing Debugger (1 property + 1 journal) + `/feed.xml` + `/sitemap.xml` en producción.
 
 ## Seguridad mínima
 
@@ -50,3 +53,4 @@ Verificación Fase 1: `lint ✓` + `build ✓`.
 - RLS sin policies + bucket escritura solo `service_role` (ver `04`).
 - Solo JPEG ≤8MB, `rights_granted` obligatorio, allowlist estricta, limpieza de huérfanos en API.
 - Free tier estimado: ~200 fotos ≈ 60MB, sobra para arranque.
+- `ADMIN_TOKEN` queda como fallback temporal hasta validar el primer `owner` en producción. Su cookie expira por defecto en 7 días y puede ajustarse con `ADMIN_TOKEN_TTL_SECONDS`; revocar el token requiere cambiar el secreto.

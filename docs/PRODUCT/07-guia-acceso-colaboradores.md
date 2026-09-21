@@ -29,7 +29,7 @@ La invitación permite enviar contenido. No publica contenido de forma automáti
 
 ## Permisos editoriales futuros
 
-La primera versión usa `ADMIN_TOKEN` para proteger el panel. Ese token no será el mecanismo de acceso de los moderadores.
+El panel ya acepta cuentas editoriales individuales mediante Supabase Auth. `ADMIN_TOKEN` queda como fallback temporal para la propietaria hasta validar el primer `owner`.
 
 La versión prevista dará a cada miembro editorial una cuenta individual de Supabase y un permiso asignado por la propietaria:
 
@@ -45,6 +45,11 @@ La propietaria otorgará o retirará estos permisos desde un panel editorial. Ca
 El permiso `trusted_contributor` no elimina la autenticación. La cuenta debe tener una sesión válida y seguir vinculada al handle correcto. La publicación automática no forma parte de esta fase.
 
 El orden de implementación está documentado en `docs/PRODUCT/roadmap.md`, sección **Evolución de permisos editoriales**.
+
+En el proyecto de testing, las migraciones editoriales ya están aplicadas. El usuario
+E2E existente pertenece al flujo de colaborador y no debe recibir el rol `owner`.
+Para validar el panel, usa una cuenta editorial separada y regístrala en
+`editorial_members`.
 
 ## Para la editora
 

@@ -13,21 +13,22 @@ Fuente: `site/app/contribuir/page.tsx`, `site/app/api/submissions/route.ts`, `si
 
 ## 2. Moderación (`/admin/review`, criterio humano no automatizable)
 
-`site/app/admin/review/page.tsx` con Server Actions:
+`site/app/admin/review/page.tsx` usa Server Actions y autorización editorial server-side:
 
-1. `login(formData)`: compara `token` con `ADMIN_TOKEN`, set cookie httpOnly `dh_admin` 7 días + `revalidatePath`.
+1. `getEditorialAccess()`: obtiene el usuario mediante Supabase Auth y busca un miembro activo en `editorial_members`. Si no hay miembro, acepta temporalmente la cookie `dh_admin` cuando `ADMIN_TOKEN` está configurado.
 2. Lista `pending order created_at asc` con foto + `author_handle/source/fecha` + texto.
 3. `decide`: `reject → status='rejected'`; `approve → insert journal_posts {slug: community-<8primeros id>, title: primera línea ≤90, category: 'Community', excerpt: ≤220, image, date_label: 'Borrador — revisión', reading_time: '3 min', status: 'review'}` + `submissions → approved`.
-4. Invitar (`inviteContributor`): el admin autentificado elige un handle existente y un email; `auth.admin.inviteUserByEmail` crea la cuenta invitada y guarda `auth_user_id`.
-5. Estados vacíos: sin `ADMIN_TOKEN` → "Panel deshabilitado"; sin DB → "Sin base de datos"; sin login admin → form token.
+4. Cada aprobación o rechazo escribe un evento en `moderation_events`. La condición `status='pending'` evita procesar dos decisiones sobre el mismo envío.
+5. Invitar (`inviteContributor`) requiere `owner` o el fallback temporal; el usuario elige un handle existente y un email. `auth.admin.inviteUserByEmail` crea la cuenta invitada y guarda `auth_user_id`.
+6. Estados vacíos: sin acceso → login editorial y, si existe, formulario de token temporal; sin DB → "Sin base de datos".
 
 Regla: aprobar **nunca publica directo**; los envíos de comunidad van a Journal, Properties solo los crea la editora.
 
 ## 3. Evolución de permisos editoriales
 
-El panel actual usa un `ADMIN_TOKEN` único. Ese mecanismo sirve para la primera versión, pero no identifica a la persona que revisa ni permite asignar permisos distintos.
+La migración ya está implementada en código y en las migraciones SQL. El panel acepta cuentas editoriales individuales y conserva `ADMIN_TOKEN` como fallback temporal hasta validar el primer `owner`.
 
-La evolución prevista usa una cuenta individual de Supabase para cada miembro editorial:
+El modelo usa una cuenta individual de Supabase para cada miembro editorial:
 
 - `owner`: administra colaboradores, moderadores, permisos y publicación.
 - `moderator`: revisa, aprueba y rechaza envíos. No administra permisos.
@@ -38,7 +39,7 @@ La API seguirá comprobando la sesión y la relación `auth_user_id` ↔ `handle
 
 El roadmap define el orden de migración en `docs/PRODUCT/roadmap.md`, sección **Evolución de permisos editoriales**. La migración debe crear primero el modelo de roles, después la autorización server-side, luego los moderadores y, al final, el flujo de confianza.
 
-La tabla de auditoría prevista guardará la cuenta, la acción, el envío afectado y la fecha de cada decisión de moderación.
+La tabla `moderation_events` guarda la cuenta, la acción, el envío afectado y la fecha de cada decisión de moderación. En testing, la tabla existe y RLS no expone filas mediante la clave publishable.
 
 ## 4. Sindicación pull (web → terceros, Fase 1 hecha)
 
