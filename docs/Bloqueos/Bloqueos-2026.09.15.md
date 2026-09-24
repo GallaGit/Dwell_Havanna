@@ -1,4 +1,4 @@
-# Bloqueo E2E — 2020.09.15
+# Bloqueo E2E — 2026.09.15
 
 Te explico dónde quedó el E2E, sin tocar nada más:
 
