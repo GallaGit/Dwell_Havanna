@@ -1,7 +1,9 @@
 import Image from "next/image";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { getServiceClient } from "@/lib/db";
+import { ModerationDecision } from "./ModerationDecision";
 import {
   canInvite,
   canManageMembers,
@@ -15,6 +17,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const COOKIE = "dh_admin";
+
+function adminInviteRedirect(status: string): never {
+  redirect(`/admin/review?invite=${encodeURIComponent(status)}`);
+}
 
 async function login(formData: FormData): Promise<void> {
   "use server";
@@ -104,9 +110,10 @@ async function decide(formData: FormData): Promise<void> {
       category: "Community",
       excerpt: sub.caption_raw.slice(0, 220),
       image: sub.image_url,
-      date_label: "Borrador — revisión",
+      date_label: new Date().toLocaleDateString("es", { month: "long", year: "numeric" }),
       reading_time: "3 min",
-      status: "review",
+      status: "published",
+      published_at: new Date().toISOString(),
     });
     if (draftError) return;
     const { data: approved } = await db
@@ -121,6 +128,11 @@ async function decide(formData: FormData): Promise<void> {
     }
   }
   revalidatePath("/admin/review");
+  if (action === "approve") {
+    revalidatePath("/");
+    revalidatePath("/journal");
+    revalidatePath(`/journal/community-${id.slice(0, 8)}`);
+  }
 }
 
 async function inviteContributor(formData: FormData): Promise<void> {
@@ -139,23 +151,30 @@ async function inviteContributor(formData: FormData): Promise<void> {
     .select("handle")
     .eq("handle", handle)
     .maybeSingle();
-  if (!contributor) return;
+  if (!contributor) {
+    adminInviteRedirect("contributor-not-found");
+  }
 
   const { data: invited, error: inviteError } = await db.auth.admin.inviteUserByEmail(email, {
     redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback?next=/contribuir`,
   });
-  if (inviteError || !invited.user) return;
+  if (inviteError || !invited.user) {
+    adminInviteRedirect(inviteError?.code === "email_exists" ? "already-registered" : "send-failed");
+  }
 
   const { error: linkError } = await db
     .from("verified_contributors")
     .update({ auth_user_id: invited.user.id })
     .eq("handle", contributor.handle);
-  if (linkError) return;
+  if (linkError) {
+    adminInviteRedirect("link-failed");
+  }
   await recordModerationEvent(db, access, "invite_contributor", {
     targetHandle: contributor.handle,
     metadata: { email_domain: email.split("@")[1] ?? "unknown" },
   });
   revalidatePath("/admin/review");
+  adminInviteRedirect("contributor-sent");
 }
 
 async function manageEditorialMember(formData: FormData): Promise<void> {
@@ -228,7 +247,6 @@ async function manageEditorialMember(formData: FormData): Promise<void> {
       });
     }
   }
-  revalidatePath("/admin/review");
 }
 
 async function inviteEditorialMember(formData: FormData): Promise<void> {
@@ -246,7 +264,9 @@ async function inviteEditorialMember(formData: FormData): Promise<void> {
   const { data: invited, error } = await db.auth.admin.inviteUserByEmail(email, {
     redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback?next=/admin/review`,
   });
-  if (error || !invited.user) return;
+  if (error || !invited.user) {
+    adminInviteRedirect(error?.code === "email_exists" ? "already-registered" : "send-failed");
+  }
 
   const { data: member, error: memberError } = await db
     .from("editorial_members")
@@ -258,16 +278,26 @@ async function inviteEditorialMember(formData: FormData): Promise<void> {
     })
     .select("auth_user_id")
     .maybeSingle();
-  if (memberError || !member) return;
+  if (memberError || !member) {
+    adminInviteRedirect("member-link-failed");
+  }
 
   await recordModerationEvent(db, access, "invite_editorial_member", {
     metadata: { target_user_id: invited.user.id, email_domain: email.split("@")[1] ?? "unknown", role },
   });
   revalidatePath("/admin/review");
+  adminInviteRedirect(role === "owner" ? "owner-sent" : "moderator-sent");
 }
 
-export default async function AdminReviewPage() {
+export default async function AdminReviewPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ invite?: string; welcome?: string }>;
+}) {
   const access = await getEditorialAccess();
+  const params = await searchParams;
+  const inviteStatus = params?.invite;
+  const welcomed = params?.welcome === "1";
   if (!access) {
     return (
       <div className="mx-auto max-w-[1400px] px-5 md:px-10 pt-16 pb-16">
@@ -314,7 +344,7 @@ export default async function AdminReviewPage() {
         <p className="mt-4 max-w-xl text-[15px] leading-7 text-charcoal/85">
           Configura las variables de Supabase para ver la cola de envíos.
         </p>
-      </div>
+       </div>
     );
   }
 
@@ -338,11 +368,34 @@ export default async function AdminReviewPage() {
         {pending.length} envío{pending.length === 1 ? "" : "s"} pendiente
         {pending.length === 1 ? "" : "s"}
       </h1>
-      <p className="mt-4 max-w-xl text-[15px] leading-7 text-charcoal/85">
-        Aprobar crea un borrador en el Journal (estado review) para editar
-        antes de publicar. Rechazar lo descarta. Nada llega a redes sin pasar
-        por aquí.
-      </p>
+       <p className="mt-4 max-w-xl text-[15px] leading-7 text-charcoal/85">
+          Aceptar publica el envío en el Journal. Rechazar lo retira de la cola.
+          Nada llega a redes sin pasar por aquí.
+       </p>
+
+       {welcomed && (
+         <div className="mt-6 max-w-xl border border-ink p-4 text-sm leading-6" role="status">
+           Welcome. Your editorial account is now signed in. You can review the queue and manage the team according to your role.
+         </div>
+       )}
+
+       {inviteStatus && (
+         <div
+           className={`mt-6 max-w-xl border p-4 text-sm leading-6 ${
+             inviteStatus.endsWith("sent") ? "border-ink" : "border-red-800/60"
+           }`}
+           role="status"
+         >
+           {inviteStatus === "owner-sent" && "Invitation sent. The new owner must open the email link once, then can request another sign-in link from the login page."}
+           {inviteStatus === "moderator-sent" && "Invitation sent. The moderator must open the email link once, then can request another sign-in link from the login page."}
+           {inviteStatus === "contributor-sent" && "Invitation sent. The contributor must open the email link once. Check spam if it does not arrive."}
+           {inviteStatus === "already-registered" && "This email already has a Supabase account or invitation. Do not create a second account; ask the person to use the login page with this email."}
+           {inviteStatus === "contributor-not-found" && "That contributor handle is not registered yet. Add it to the verified contributors list before inviting the email."}
+           {inviteStatus === "send-failed" && "The invitation could not be sent. Confirm the email, Supabase email configuration, and that the address is not already registered."}
+           {inviteStatus === "link-failed" && "The email was sent, but the contributor link could not be saved. Do not resend until the account link is checked."}
+           {inviteStatus === "member-link-failed" && "The email was sent, but the editorial role could not be saved. Check the team list before sending another invitation."}
+         </div>
+       )}
 
        {canInvite(access) && (
          <section className="mt-10 max-w-xl border-t rule pt-6">
@@ -438,26 +491,8 @@ export default async function AdminReviewPage() {
                 {s.caption_raw}
               </p>
               <div className="mt-4 flex gap-3">
-                <form action={decide}>
-                  <input type="hidden" name="id" value={s.id} />
-                  <input type="hidden" name="action" value="approve" />
-                  <button
-                    type="submit"
-                    className="text-sm bg-ink text-paper px-6 py-2.5 hover:opacity-80 transition"
-                  >
-                    Aprobar → borrador
-                  </button>
-                </form>
-                <form action={decide}>
-                  <input type="hidden" name="id" value={s.id} />
-                  <input type="hidden" name="action" value="reject" />
-                  <button
-                    type="submit"
-                    className="text-sm border border-ink px-6 py-2.5 hover:bg-ink hover:text-paper transition-colors"
-                  >
-                    Rechazar
-                  </button>
-                </form>
+                <ModerationDecision action="approve" submissionId={s.id} formAction={decide} />
+                <ModerationDecision action="reject" submissionId={s.id} formAction={decide} />
               </div>
             </div>
           </article>

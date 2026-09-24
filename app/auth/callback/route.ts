@@ -9,10 +9,14 @@ export async function GET(request: Request) {
   const next = url.searchParams.get("next");
   const destination = next?.startsWith("/") ? next : "/contribuir";
   const supabase = await getSupabaseServerClient();
+  let signedIn = false;
 
   if (code && supabase) {
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    signedIn = !error;
   }
 
-  return NextResponse.redirect(new URL(destination, url.origin));
+  const destinationUrl = new URL(destination, url.origin);
+  if (signedIn) destinationUrl.searchParams.set("welcome", "1");
+  return NextResponse.redirect(destinationUrl);
 }

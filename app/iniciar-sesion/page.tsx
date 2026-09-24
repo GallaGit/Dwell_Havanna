@@ -40,10 +40,10 @@ export default function SignInPage() {
       },
     });
     if (authError) {
-      setError("We could not send the link. Confirm that you have received an invitation.");
+      setError("We could not send the link. Confirm that this email was invited and check that it is spelled correctly.");
       return;
     }
-    setMessage("Check your email. The sign-in link can only be used once.");
+    setMessage("Check your inbox and spam folder. The sign-in link can only be used once. If it expires, request a new one here.");
   }
 
   return (
@@ -53,8 +53,9 @@ export default function SignInPage() {
         Enter with your <span className="italic font-normal">invitation</span>.
       </h1>
       <p className="mt-5 max-w-xl text-[15px] leading-7 text-charcoal/85">
-        Dwell Havana has no public sign-up. If the editorial team invited you,
-        enter the associated email to receive a secure link.
+         Dwell Havana has no public sign-up. If the editorial team invited you,
+         enter the associated email to receive a secure link. The link works once
+         and must be opened in the browser where you want to work.
       </p>
       <form onSubmit={onSubmit} className="mt-10 max-w-md border-t rule pt-8 flex flex-col gap-4">
         <label className="flex flex-col gap-2">
