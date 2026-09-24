@@ -2,10 +2,10 @@
 
 ## Current branch
 
-`feat/editorial-permissions-model`
+`cursor/editorial-permissions-onto-main-f82b`
 
-The branch has not opened a pull request. The requested commit will be pushed
-directly to the branch.
+This branch merges `origin/main` (`68bf651`) into the editorial permissions work
+and opens one pull request against `main`. Do not force-push `main`.
 
 ## Supabase projects
 
@@ -73,7 +73,7 @@ until the testing flow has been validated.
 - `node --env-file=.env.local --test tests/submissions-http.e2e.test.mjs`: 1 passing authenticated HTTP E2E test.
 - Testing REST checks for the new column and tables: successful.
 - Testing has a separate active owner account linked to `@ociel.galla`; the E2E contributor remains separate.
-- Future Auth UX: after a user accepts an invitation, show a welcome message on the callback destination. This is documented as a follow-up and is not implemented in the current test flow.
+- After a successful Auth callback, `/auth/callback` adds `welcome=1`. `/admin/review` renders that welcome status. Other destinations receive the query parameter and do not render a welcome message yet.
 - The owner account reached `/admin/review` and displayed the editorial queue, invitation form, and member-management controls.
 - Complete browser assertions for moderator and inactive-account transitions remain pending because the current dev-server harness reused stale page or session state during role transitions.
 - Direct Supabase checks confirmed that `owner -> moderator -> inactive` updates work and cleanup completed for the temporary role-transition test.

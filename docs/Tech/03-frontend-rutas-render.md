@@ -4,7 +4,7 @@ Fuente: `app/**/page.tsx`, `app/**/route.ts`, `components/*.tsx`.
 
 Los flujos editoriales y las decisiones de permisos están en `docs/PRODUCT/05-flujos-editoriales.md` y `docs/PRODUCT/roadmap.md`.
 
-## Tabla de rutas (19 en build Fase 1)
+## Tabla de rutas
 
 | Ruta | Archivo | Tipo / render |
 |---|---|---|
@@ -14,8 +14,10 @@ Los flujos editoriales y las decisiones de permisos están en `docs/PRODUCT/05-f
 | `/properties/[slug]` ×3 | `app/properties/[slug]/page.tsx` | SSG+ISR, `generateStaticParams()` + `generateMetadata()` OG |
 | `/journal` | `app/journal/page.tsx` | Server, lista desde `listPublishedPosts()` |
 | `/journal/[slug]` ×4 | `app/journal/[slug]/page.tsx` | SSG+ISR + OG propio |
-| `/contribuir` | `app/contribuir/page.tsx` | **Único `"use client"`**: formulario + `fetch POST /api/submissions` |
-| `/admin/review` | `app/admin/review/page.tsx` | Server + Server Actions (`login`, `decide`) |
+| `/contribuir` | `app/contribuir/page.tsx` | `"use client"`: formulario + `fetch POST /api/submissions` |
+| `/iniciar-sesion` | `app/iniciar-sesion/page.tsx` | `"use client"`: enlace para emails ya invitados. Respeta `next` si empieza por `/` |
+| `/auth/callback` | `app/auth/callback/route.ts` | Cambia el código Auth por sesión y redirige |
+| `/admin/review` | `app/admin/review/page.tsx` + `ModerationDecision.tsx` | Server Actions. La confirmación de aprobar o rechazar es cliente |
 | `/api/submissions` | `app/api/submissions/route.ts` | `POST` dinámico, `runtime nodejs` |
 | `/feed.xml` | `app/feed.xml/route.ts` | `GET` RSS, `revalidate 3600` |
 | `/sitemap.xml` | `app/sitemap.ts` | Sitemap dinámico |

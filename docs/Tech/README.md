@@ -19,7 +19,7 @@
 2. `02-estructura-carpetas.md` — árbol de la app en la raíz y rol de cada archivo/carpeta.
 3. `03-frontend-rutas-render.md` — rutas App Router, render ISR/SSG, metadata OG, componentes.
 4. `04-backend-datos-supabase.md` — `lib/db.ts`, `lib/content.ts`, `lib/data.ts`, schema SQL, Storage.
-5. `05-flujos-editoriales.md` — ingesta `/contribuir` → `/api/submissions` → `/admin/review` → sindicación pull (`sitemap`, `feed.xml`, `embed`).
+5. Los flujos editoriales viven en `docs/PRODUCT/05-flujos-editoriales.md`, no en esta carpeta.
 6. `06-config-operacion.md` — env vars, scripts, activación Supabase, seguridad.
 
 ## Documentación de producto
@@ -36,8 +36,8 @@ Los documentos de roadmap, flujos editoriales y uso del sistema viven en [`../PR
 - Datos: **Supabase Postgres + Storage (`dwell-media`)** con **fallback estático** en `lib/data.ts` si no hay DB.
 - Contenido: `properties` (3) + `journal_posts` (4), solo `status='published'` llega a la web, ISR `revalidate 3600`.
 - Flujo humano obligatorio: nada se publica sin pasar por `/admin/review`.
-- Permisos editoriales futuros: cuentas individuales de Supabase con roles `owner` y `moderator`; el roadmap define la migración desde `ADMIN_TOKEN`.
-- Fuente de verdad editorial: `docs/Dwell-Havana_Design-Direction/Design-Direction.md`. Fuente de verdad de fases: `docs/Idea/Fase-1-Cierre.md`.
+- Permisos editoriales: cuentas `owner` y `moderator`. Aprobar, tras confirmación, inserta `journal_posts.status='published'`. `ADMIN_TOKEN` es el fallback temporal.
+- Fuente de verdad editorial: `docs/Dwell-Havana_Design-Direction/Design-Direction.md`. El comportamiento vigente de moderación está en `docs/PRODUCT/05-flujos-editoriales.md`. `docs/Idea/Fase-1-Cierre.md` conserva el cierre del 2026-09-15 y señala dónde el código cambió.
 
 ## Convención
 

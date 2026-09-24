@@ -10,23 +10,32 @@ Copiar `.env.example` → `.env.local` (gitignoreado, nunca commitear).
 
 | Var | Expuesta al navegador | Dónde se usa |
 |---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | Sí | `lib/site.ts` (OG, sitemap, feed, embeds). Default `https://dwellhavana.com` |
-| `NEXT_PUBLIC_SUPABASE_URL` | Sí | `lib/db.ts` |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sí | Reservada cliente (hoy el server usa service_role) |
+| `NEXT_PUBLIC_SITE_URL` | Sí | `lib/site.ts` (OG, sitemap, feed, embeds). También `redirectTo` de las invitaciones Auth. Si falta, el sitio canónico usa `https://dwellhavana.com` y las invitaciones usan `http://localhost:3000` |
+| `NEXT_PUBLIC_SUPABASE_URL` | Sí | `lib/db.ts` y el cliente Auth |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sí | Supabase Auth en el navegador y cookies SSR |
 | `SUPABASE_SERVICE_ROLE_KEY` | **No, solo server** | `lib/db.ts`, API submissions, admin e invitaciones |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sí, publishable | Supabase Auth en navegador y cookies SSR |
 | `ADMIN_TOKEN` | **No, solo server** | `app/admin/review/page.tsx` (cookie `dh_admin`) |
 | `ADMIN_TOKEN_TTL_SECONDS` | **No, solo server** | Duración de la cookie fallback; default 7 días |
 
 > Nota: `docs/Idea/Fase-1-Cierre.md §4` cita `NEXT_PUBLIC_SUPABASE_ANON_KEY`; el `.env.example` actual usa `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (nuevo formato Supabase). Manda el `.env.example`.
 
+## Enlaces de invitación
+
+`inviteUserByEmail` arma `redirectTo` con `NEXT_PUBLIC_SITE_URL` y `/auth/callback`. Si la variable no está definida, usa `http://localhost:3000`. Supabase Auth completa el enlace solo si esa URL está en la allowlist de redirecciones del proyecto.
+
+`localhost` funciona en la máquina que ejecuta la app. No sirve para un invitado en otro equipo. La confirmación remota queda diferida hasta configurar la URL pública de producción y permitirla en Supabase Auth.
+
+`/iniciar-sesion` pide un enlace nuevo con `window.location.origin`. Si abres la app en `localhost`, ese enlace también apunta a `localhost`.
+
 ## Scripts
 
 ```bash
-npm run dev   # desarrollo
-npm run build # SSG+ISR (19 rutas con fallback sin DB)
-npm run start # producción
-npm run lint  # eslint next core-web-vitals + typescript
+npm run dev                 # desarrollo
+npm run build               # SSG+ISR
+npm run start               # producción
+npm run lint                # eslint next core-web-vitals + typescript
+npm test                    # unit tests; el E2E HTTP se omite sin E2E_*
+npm run test:editorial-auth # solo la política de roles
 ```
 
 Verificación Fase 1: `lint ✓` + `build ✓`.
@@ -36,11 +45,11 @@ Verificación Fase 1: `lint ✓` + `build ✓`.
 1. Crear proyecto Supabase → copiar URL + keys + inventar `ADMIN_TOKEN` largo en `.env.local`.
 2. SQL Editor: correr `supabase/01-schema.sql`, luego `supabase/02-seed.sql`.
 3. Alta editorial: `insert into verified_contributors (handle, display_name, source) values ('@arq.habana','Nombre','ig');`
-4. Desde `/admin/review`, invitar el email del colaborador usando el handle existente.
-5. El colaborador abre el enlace recibido en `/iniciar-sesion`; no existe registro público.
-6. Probar: `/contribuir` → enviar → `/admin/review` → aprobar → ver borrador en DB.
-7. Fijar `NEXT_PUBLIC_SITE_URL` al dominio real antes de compartir.
-8. Para el acceso editorial, crear una cuenta Supabase separada del usuario E2E e insertarla como `owner` en `editorial_members`.
+4. Desde `/admin/review`, entra con la cuenta `owner` e invita el email del colaborador usando el handle existente. `ADMIN_TOKEN` solo cubre esa invitación si la cuenta `owner` no está disponible.
+5. El colaborador abre el enlace recibido. No existe registro público.
+6. Probar: `/contribuir` → enviar → `/admin/review` → confirmar la aprobación → ver el post en `/journal` con `journal_posts.status='published'`.
+7. Fijar `NEXT_PUBLIC_SITE_URL` al dominio real antes de compartir, y añadir esa URL a la allowlist de redirecciones de Supabase Auth.
+8. En testing ya hay un `owner` activo, distinto del usuario E2E. En un proyecto nuevo, inserta esa cuenta como `owner` en `editorial_members`. No promuevas el colaborador E2E.
 9. Validar `/iniciar-sesion?next=/admin/review`, una decisión de moderación y su fila en `moderation_events`.
 10. Validar: Meta Sharing Debugger (1 property + 1 journal) + `/feed.xml` + `/sitemap.xml` en producción.
 

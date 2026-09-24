@@ -21,8 +21,10 @@ Fuente: `app/contribuir/page.tsx`, `app/api/submissions/route.ts`, `app/admin/re
 4. Cada aprobación o rechazo escribe un evento en `moderation_events`. La condición `status='pending'` evita procesar dos decisiones sobre el mismo envío.
 5. La interfaz pide confirmación antes de enviar cada decisión. El diálogo informa que aprobar publica el contenido y que rechazar lo retira de la cola.
 6. Tras aprobar, el servidor revalida `/`, `/journal`, `/journal/<slug>` y `/admin/review`.
-7. Invitar (`inviteContributor`) requiere `owner` o el fallback temporal; el usuario elige un handle existente y un email. `auth.admin.inviteUserByEmail` crea la cuenta invitada y guarda `auth_user_id`.
+7. Invitar (`inviteContributor`) requiere `owner` o el fallback temporal. Un `moderator` no invita. El usuario elige un handle existente y un email. `auth.admin.inviteUserByEmail` crea la cuenta invitada y guarda `auth_user_id`.
 8. Estados vacíos: sin acceso → login editorial y, si existe, formulario de token temporal; sin DB → "Sin base de datos".
+
+`inviteContributor` e `inviteEditorialMember` pasan `redirectTo` con `NEXT_PUBLIC_SITE_URL` y `/auth/callback`. Si la variable no está definida, el servidor usa `http://localhost:3000`. Supabase Auth solo completa el enlace si esa URL está en la allowlist de redirecciones. `localhost` abre el enlace en la máquina que ejecuta la app. La confirmación remota queda diferida hasta la URL pública de producción.
 
 Los `owner` pueden gestionar el equipo editorial desde el mismo panel: invitar
 cuentas `owner` o `moderator`, cambiar roles y activar o desactivar miembros.
@@ -34,7 +36,7 @@ Regla: aprobar publica directamente el envío de comunidad en Journal después d
 
 ## 3. Evolución de permisos editoriales
 
-La migración ya está implementada en código y en las migraciones SQL. El panel acepta cuentas editoriales individuales y conserva `ADMIN_TOKEN` como fallback temporal hasta validar el primer `owner`.
+La migración ya está implementada en código y en las migraciones SQL. El panel acepta cuentas editoriales individuales. En testing ya hay un `owner`. `ADMIN_TOKEN` sigue como fallback temporal hasta verificar ese acceso en producción.
 
 El modelo usa una cuenta individual de Supabase para cada miembro editorial:
 

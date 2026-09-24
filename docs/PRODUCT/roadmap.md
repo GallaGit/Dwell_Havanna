@@ -1,6 +1,6 @@
 # Dwell Havana roadmap
 
-Estado actualizado: 2026-09-21
+Estado actualizado: 2026-09-24
 
 Este documento reúne el trabajo hecho, los pasos de activación y las fases siguientes. Las casillas marcadas reflejan el estado documentado en `docs/Idea/Fase-1-Cierre.md` y en `docs/Tech/`.
 
@@ -109,7 +109,7 @@ Cambios actualmente presentes en el árbol de trabajo:
 
 ## Evolución de permisos editoriales
 
-Esta evolución reemplazará el uso compartido de `ADMIN_TOKEN` para cualquier persona que necesite permisos editoriales. `ADMIN_TOKEN` queda, de forma temporal, como acceso de emergencia para la propietaria hasta que exista el primer usuario `owner`.
+Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. En testing ya hay un `owner` activo. `ADMIN_TOKEN` queda como fallback temporal hasta verificar ese acceso individual en producción.
 
 ### Modelo decidido y base implementada
 
@@ -127,7 +127,7 @@ Esta evolución reemplazará el uso compartido de `ADMIN_TOKEN` para cualquier p
 |---|---:|---:|---:|---:|---:|---:|
 | `contributor` | Sí | No | No | No | No | No |
 | `trusted_contributor` | Sí | No | No | No | No | No |
-| `moderator` | Opcional | Sí | Sí | No | No | No por defecto |
+| `moderator` | Opcional | Sí | Sí | No | No | Sí, al aprobar un envío de comunidad |
 | `owner` | Opcional | Sí | Sí | Sí | Sí | Sí |
 
 `trusted_contributor` no será un bypass de seguridad. La API seguirá exigiendo una sesión válida y el vínculo entre `auth_user_id` y `handle`.
@@ -139,7 +139,7 @@ El permiso de confianza permitirá marcar el envío como aprobado automáticamen
 1. **Definir el modelo de permisos**
    - [x] Elegir los nombres finales de tablas, roles y acciones.
    - [x] Definir qué puede hacer cada rol.
-   - [x] Confirmar que publicar y gestionar permisos quedan reservados a `owner`.
+   - [x] Confirmar que gestionar permisos queda reservado a `owner`. Aprobar publica el envío de comunidad, y `moderator` también puede aprobar.
 
 2. **Crear el esquema de roles**
    - [x] Crear una migración para `editorial_members`.
@@ -155,9 +155,9 @@ El permiso de confianza permitirá marcar el envío como aprobado automáticamen
    - [x] No decidir permisos con `user_metadata`.
 
 4. **Migrar el acceso de la propietaria**
-   - [ ] Invitar la cuenta Supabase de la propietaria.
-   - [ ] Vincularla con el rol `owner`.
-   - [ ] Probar el acceso individual.
+   - [x] Invitar la cuenta Supabase de la propietaria en el proyecto de testing.
+   - [x] Vincularla con el rol `owner` en testing.
+   - [x] Probar el acceso individual en testing: la cuenta abre `/admin/review` y ve la cola, las invitaciones y la gestión de miembros.
    - [x] Mantener `ADMIN_TOKEN` solo como fallback temporal.
 
 5. **Añadir moderadores**
@@ -179,9 +179,9 @@ El permiso de confianza permitirá marcar el envío como aprobado automáticamen
    - Mantener la publicación final bajo una acción editorial explícita.
 
 8. **Añadir pruebas y retirar el fallback**
-   - Cubrir cada rol y cada permiso negativo.
-   - Probar la revocación de una cuenta activa.
-   - Probar la auditoría de aprobaciones y rechazos.
+   - [x] Cubrir `owner`, `moderator`, miembro inactivo y el fallback temporal en `tests/editorial-permissions.test.mjs`.
+   - Probar en navegador la revocación de una cuenta que ya tenía sesión.
+   - Probar en navegador la auditoría de aprobaciones y rechazos.
    - Probar el flujo de confianza sin publicación directa.
    - Retirar `ADMIN_TOKEN` cuando el acceso `owner` individual esté verificado en producción.
 
@@ -213,10 +213,10 @@ El permiso de confianza permitirá marcar el envío como aprobado automáticamen
 
 Requiere credenciales y acciones fuera del repositorio.
 
-Este paso activa el modelo actual de Fase 1. La migración a cuentas editoriales individuales se ejecuta después de validar la aplicación base y antes de retirar `ADMIN_TOKEN`.
+Este paso activa producción. Las migraciones editoriales ya están en el repositorio y en testing. En producción se aplican después de validar el flujo, y antes de retirar `ADMIN_TOKEN`.
 
 - [ ] Confirmar el proyecto Supabase de producción.
-- [ ] Configurar `NEXT_PUBLIC_SITE_URL` con el dominio real.
+- [ ] Configurar `NEXT_PUBLIC_SITE_URL` con el dominio real y permitir esa URL en la allowlist de redirecciones de Supabase Auth. Sin eso, los emails de invitación usan `localhost` y solo se abren en la máquina que ejecuta la app. La confirmación remota queda diferida hasta esta URL.
 - [ ] Configurar `NEXT_PUBLIC_SUPABASE_URL`.
 - [ ] Configurar `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 - [ ] Configurar `SUPABASE_SERVICE_ROLE_KEY` solo en el servidor.
@@ -229,9 +229,7 @@ Este paso activa el modelo actual de Fase 1. La migración a cuentas editoriales
 - [ ] Desplegar la aplicación.
 - [ ] Confirmar que ninguna variable secreta se expone al navegador.
 
-La migración `supabase/04-editorial-permissions.sql` crea `editorial_members` y
-`moderation_events`. Debe ejecutarse después de `03-contributor-auth.sql`; el primer
-usuario editorial debe vincularse manualmente como `owner` con su `auth_user_id`.
+En producción, después de `03-contributor-auth.sql`, aplican `supabase/04-editorial-permissions.sql` y `supabase/migrations/20260921000300_editorial_member_management.sql`. El primer usuario editorial se vincula como `owner` con su `auth_user_id`. Estas casillas siguen sin marcar: producción no se ha migrado.
 
 ## Paso 3: repetir el E2E en producción
 
@@ -240,9 +238,8 @@ usuario editorial debe vincularse manualmente como `owner` con su `auth_user_id`
 - [ ] Confirmar que una cuenta no autorizada recibe `403`.
 - [ ] Confirmar que un envío sin derechos recibe `422`.
 - [ ] Revisar el envío en `/admin/review`.
-- [ ] Aprobarlo y confirmar que crea un borrador.
-- [ ] Editar y publicar el borrador desde la base de datos mientras no exista CMS.
-- [ ] Confirmar que el contenido publicado aparece en la web.
+- [ ] Aprobarlo después de la confirmación del panel.
+- [ ] Confirmar que `journal_posts.status` queda en `published` y que el post aparece en `/journal`.
 - [ ] Confirmar `/feed.xml` en producción.
 - [ ] Confirmar `/sitemap.xml` en producción.
 - [ ] Validar un slug de property con Meta Sharing Debugger.
@@ -330,16 +327,17 @@ Acciones de la dueña de las cuentas, antes de implementar la API.
 
 ## Estado de validación local y de testing
 
-- `npm run lint` pasa.
-- `npm run build` pasa y genera 21 rutas con el estado actual de la aplicación.
-- `npm test` pasa con 6 pruebas cuando se cargan las variables del proyecto de testing.
-- El E2E valida autenticación requerida, derechos obligatorios, colaborador desconocido, submission válida, persistencia y limpieza.
+- `npm run lint` pasa en la revisión del 2026-09-24.
+- `npm test` pasa con 9 pruebas y omite 1 E2E HTTP porque no hay variables `E2E_*`.
+- La build registrada antes de esta revisión generaba 21 rutas. Esta revisión no volvió a ejecutar `npm run build`.
+- El E2E, cuando se configura, valida autenticación requerida, derechos obligatorios, colaborador desconocido, submission válida, persistencia y limpieza.
 - RLS no devuelve filas a la clave publishable para `editorial_members`, `moderation_events` ni `verified_contributors`.
-- Testing tiene las migraciones `20260921000100_contributor_auth.sql` y `20260921000200_editorial_permissions.sql` aplicadas.
-- Testing todavía no tiene filas en `editorial_members`.
-- El usuario existente de testing está vinculado al colaborador E2E y no se elevará a `owner`.
+- Testing tiene aplicadas `20260921000100_contributor_auth.sql`, `20260921000200_editorial_permissions.sql` y `20260921000300_editorial_member_management.sql`.
+- Testing tiene un `owner` activo en `editorial_members`, distinto del colaborador E2E. Ese colaborador no se promueve a `owner`.
+- Producción no tiene aplicadas estas migraciones editoriales.
+- Falta la prueba de navegador del flujo completo de aprobación, publicación y rechazo.
 
-Para completar el siguiente paso, identifica una cuenta editorial separada, crea o invita esa cuenta en Supabase Auth y registra su UUID como `owner`:
+Para otra cuenta editorial, invítala desde el panel o inserta su UUID:
 
 ```sql
 insert into editorial_members (auth_user_id, role, display_name)
