@@ -1,11 +1,11 @@
-# 02 — Estructura de carpetas (`site/`)
+# 02 — Estructura de carpetas
 
-Leído con árbol real de `site/` el 2026-09-15.
+Leído con el árbol real de la raíz del repositorio el 2026-09-15.
 
-La documentación de producto está en `docs/PRODUCT/`. Esta página solo describe la estructura técnica de `site/`.
+La documentación de producto está en `docs/PRODUCT/`. Esta página describe la app Next.js en la raíz del repositorio. `docs/` queda fuera de este árbol.
 
 ```
-site/
+.
 ├── .env.example            # plantilla env (URL, Supabase, ADMIN_TOKEN)
 ├── .env.local              # local real, gitignoreado (no commitear)
 ├── .gitignore              # ignora node_modules, .next, .env*, .vercel
@@ -49,15 +49,15 @@ site/
 
 | Path | Rol |
 |---|---|
-| `site/app/layout.tsx` | Shell global: `<html lang="en">`, header/main/footer, metadata base |
-| `site/app/page.tsx` | Portada: featured + journal + homes + patio + Havana + about |
-| `site/app/sitemap.ts` | Sitemap dinámico desde `listPublished*()` |
-| `site/app/feed.xml/route.ts` | RSS journal+properties |
-| `site/app/embed/[slug]/route.ts` | Embed terceros (resuelve property o post, 404 si no) |
-| `site/app/api/submissions/route.ts` | Ingesta validada (JPEG ≤8MB, allowlist, Storage) |
-| `site/app/contribuir/page.tsx` | Único Client Component: `fetch` + estados idle/sending/done/error |
-| `site/app/admin/review/page.tsx` | Moderación con Server Actions |
-| `site/lib/site.ts` | Canónica: `NEXT_PUBLIC_SITE_URL` o `https://dwellhavana.com` |
-| `site/lib/db.ts` | Cliente server-only, cacheado, `null` si faltan envs |
-| `site/lib/content.ts` | Misma forma que `data.ts` para no romper páginas |
-| `site/supabase/*.sql` | Orden de aplicación: `01` luego `02` en SQL Editor |
+| `app/layout.tsx` | Shell global: `<html lang="en">`, header/main/footer, metadata base |
+| `app/page.tsx` | Portada: featured + journal + homes + patio + Havana + about |
+| `app/sitemap.ts` | Sitemap dinámico desde `listPublished*()` |
+| `app/feed.xml/route.ts` | RSS journal+properties |
+| `app/embed/[slug]/route.ts` | Embed terceros (resuelve property o post, 404 si no) |
+| `app/api/submissions/route.ts` | Ingesta validada (JPEG ≤8MB, allowlist, Storage) |
+| `app/contribuir/page.tsx` | Único Client Component: `fetch` + estados idle/sending/done/error |
+| `app/admin/review/page.tsx` | Moderación con Server Actions |
+| `lib/site.ts` | Canónica: `NEXT_PUBLIC_SITE_URL` o `https://dwellhavana.com` |
+| `lib/db.ts` | Cliente server-only, cacheado, `null` si faltan envs |
+| `lib/content.ts` | Misma forma que `data.ts` para no romper páginas |
+| `supabase/*.sql` | Orden de aplicación: `01` luego `02` en SQL Editor |
