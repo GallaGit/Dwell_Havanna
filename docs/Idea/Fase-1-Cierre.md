@@ -13,19 +13,19 @@ Sin DB configurada el sitio funciona igual (fallback estático de `lib/data.ts`)
 ### 1.1 Sindicación pull (web → terceros)
 | Pieza | Archivo | Notas |
 |---|---|---|
-| URL canónica | `site/lib/site.ts` | `siteUrl` desde `NEXT_PUBLIC_SITE_URL` (fallback `https://dwellhavana.com`), helper `canonicalFor(path)` |
-| OG + canonical por propiedad | `site/app/properties/[slug]/page.tsx` (`generateMetadata`) | title, description, `alternates.canonical`, OpenGraph article + Twitter summary_large_image con `cover` |
-| OG + canonical por post | `site/app/journal/[slug]/page.tsx` (`generateMetadata`) | idem con `image` del post |
-| Sitemap | `site/app/sitemap.ts` | home, índices, about + todos los slugs publicados; `revalidate 3600` |
-| RSS | `site/app/feed.xml/route.ts` | RSS 2.0 con journal + properties, incluye `media:content` con la imagen; `revalidate 3600` |
-| Embed terceros | `site/app/embed/[slug]/route.ts` | HTML standalone (foto + título + atribución + link) para `<iframe>` en blogs/páginas partner; resuelve properties y journal; 404 si no existe |
+| URL canónica | `lib/site.ts` | `siteUrl` desde `NEXT_PUBLIC_SITE_URL` (fallback `https://dwellhavana.com`), helper `canonicalFor(path)` |
+| OG + canonical por propiedad | `app/properties/[slug]/page.tsx` (`generateMetadata`) | title, description, `alternates.canonical`, OpenGraph article + Twitter summary_large_image con `cover` |
+| OG + canonical por post | `app/journal/[slug]/page.tsx` (`generateMetadata`) | idem con `image` del post |
+| Sitemap | `app/sitemap.ts` | home, índices, about + todos los slugs publicados; `revalidate 3600` |
+| RSS | `app/feed.xml/route.ts` | RSS 2.0 con journal + properties, incluye `media:content` con la imagen; `revalidate 3600` |
+| Embed terceros | `app/embed/[slug]/route.ts` | HTML standalone (foto + título + atribución + link) para `<iframe>` en blogs/páginas partner; resuelve properties y journal; 404 si no existe |
 
 ### 1.2 Ingesta curada (colaborador → web)
 | Pieza | Archivo | Notas |
 |---|---|---|
-| Formulario | `site/app/contribuir/page.tsx` | client component: handle, título opcional, texto, foto, checkbox de derechos; mensajes de error en español mapeados por código |
-| API | `site/app/api/submissions/route.ts` | `POST` multipart; ver §2 |
-| Moderación | `site/app/admin/review/page.tsx` | login por `ADMIN_TOKEN` (cookie httpOnly `dh_admin`, 7 días); lista pendientes con foto+texto; **aprobar → crea borrador en `journal_posts` (`status='review'`, categoría Community)**; rechazar → `rejected`; ver §3 |
+| Formulario | `app/contribuir/page.tsx` | client component: handle, título opcional, texto, foto, checkbox de derechos; mensajes de error en español mapeados por código |
+| API | `app/api/submissions/route.ts` | `POST` multipart; ver §2 |
+| Moderación | `app/admin/review/page.tsx` | login por `ADMIN_TOKEN` (cookie httpOnly `dh_admin`, 7 días); lista pendientes con foto+texto; **aprobar → crea borrador en `journal_posts` (`status='review'`, categoría Community)**; rechazar → `rejected`; ver §3 |
 
 ### 1.3 Decisión de fotos (implementada)
 Responde a "¿qué DB es buena para fotos?": binarios en **Supabase Storage**, metadatos en **Postgres**.
@@ -55,7 +55,7 @@ Si el insert falla tras subir, borra el archivo huérfano (best-effort).
 
 ## 6. Qué falta para activar (lado humano, ~30 min)
 1. Crear proyecto Supabase → copiar URL + keys a `.env.local` (+ `ADMIN_TOKEN` inventado, largo).
-2. SQL Editor: correr `site/supabase/01-schema.sql`, `03-contributor-auth.sql` y luego `02-seed.sql`.
+2. SQL Editor: correr `supabase/01-schema.sql`, `03-contributor-auth.sql` y luego `02-seed.sql`.
 3. Dar de alta colaboradores: `insert into verified_contributors (handle, display_name, source) values ('@arq.habana','Nombre','ig');`
 4. Invitar el email desde `/admin/review`; no existe registro público.
 5. El colaborador abre el enlace y prueba `/contribuir` → enviar → `/admin/review` → aprobar → ver borrador en DB.

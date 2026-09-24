@@ -1,19 +1,19 @@
 # 05 — Flujos editoriales (ingesta → moderación → sindicación)
 
-Fuente: `site/app/contribuir/page.tsx`, `site/app/api/submissions/route.ts`, `site/app/admin/review/page.tsx`, `site/app/sitemap.ts`, `site/app/feed.xml/route.ts`, `site/app/embed/[slug]/route.ts`.
+Fuente: `app/contribuir/page.tsx`, `app/api/submissions/route.ts`, `app/admin/review/page.tsx`, `app/sitemap.ts`, `app/feed.xml/route.ts`, `app/embed/[slug]/route.ts`.
 
 ## 1. Ingesta curada (colaborador → web)
 
 `Invitación admin` → `Supabase Auth` → `Formulario /contribuir` → `POST /api/submissions` → fila `submissions(status='pending')`. Nada visible al público.
 
-- Form (`site/app/contribuir/page.tsx`): handle*, title≤140, caption*≤2000, photo* JPEG, checkbox `rights=true`*. Errores en español mapeados por código (`FRIENDLY`).
-- Auth (`site/app/iniciar-sesion/page.tsx`): solo envía enlace OTP a usuarios ya invitados (`shouldCreateUser=false`). No hay registro público.
-- API (`site/app/api/submissions/route.ts`, multipart): exige sesión Auth (401), comprueba el vínculo `verified_contributors.auth_user_id` con el handle enviado (403), valida handle+caption (422), rights (422), photo JPEG (422), ≤8MB (422), sube a `dwell-media/submissions/<handle>/<uuid>.jpg`, `getPublicUrl`, inserta `source='form', rights_granted=true`. Si el insert falla, borra el huérfano (best-effort).
+- Form (`app/contribuir/page.tsx`): handle*, title≤140, caption*≤2000, photo* JPEG, checkbox `rights=true`*. Errores en español mapeados por código (`FRIENDLY`).
+- Auth (`app/iniciar-sesion/page.tsx`): solo envía enlace OTP a usuarios ya invitados (`shouldCreateUser=false`). No hay registro público.
+- API (`app/api/submissions/route.ts`, multipart): exige sesión Auth (401), comprueba el vínculo `verified_contributors.auth_user_id` con el handle enviado (403), valida handle+caption (422), rights (422), photo JPEG (422), ≤8MB (422), sube a `dwell-media/submissions/<handle>/<uuid>.jpg`, `getPublicUrl`, inserta `source='form', rights_granted=true`. Si el insert falla, borra el huérfano (best-effort).
 - Contrato detallado ya documentado en `docs/Idea/Fase-1-Cierre.md §2` — no se duplica aquí.
 
 ## 2. Moderación (`/admin/review`, criterio humano no automatizable)
 
-`site/app/admin/review/page.tsx` usa Server Actions y autorización editorial server-side:
+`app/admin/review/page.tsx` usa Server Actions y autorización editorial server-side:
 
 1. `getEditorialAccess()`: obtiene el usuario mediante Supabase Auth y busca un miembro activo en `editorial_members`. Si no hay miembro, acepta temporalmente la cookie `dh_admin` cuando `ADMIN_TOKEN` está configurado.
 2. Lista `pending order created_at asc` con foto + `author_handle/source/fecha` + texto.
@@ -104,9 +104,9 @@ El borrado físico quedará reservado para solicitudes administrativas o legales
 
 | Pieza | Archivo | Detalle |
 |---|---|---|
-| OG + canonical por slug | `site/app/properties/[slug]/page.tsx`, `site/app/journal/[slug]/page.tsx` (`generateMetadata`) | `alternates.canonical`, OG `article`, Twitter `summary_large_image` con cover/image |
-| Sitemap | `site/app/sitemap.ts` | home, índices, about + slugs, `revalidate 3600` |
-| RSS | `site/app/feed.xml/route.ts` | RSS 2.0 journal+properties con `media:content`, `revalidate 3600` |
-| Embed | `site/app/embed/[slug]/route.ts` | HTML standalone (foto+título+atribución+link) para `<iframe>`, 404 si no existe |
+| OG + canonical por slug | `app/properties/[slug]/page.tsx`, `app/journal/[slug]/page.tsx` (`generateMetadata`) | `alternates.canonical`, OG `article`, Twitter `summary_large_image` con cover/image |
+| Sitemap | `app/sitemap.ts` | home, índices, about + slugs, `revalidate 3600` |
+| RSS | `app/feed.xml/route.ts` | RSS 2.0 journal+properties con `media:content`, `revalidate 3600` |
+| Embed | `app/embed/[slug]/route.ts` | HTML standalone (foto+título+atribución+link) para `<iframe>`, 404 si no existe |
 
 Fase 2 (no empezada, ver `docs/Idea/Plan-Crossposting.md §5`): `POST /api/syndicate` + log `syndications` + App Meta. Fase 3: webhooks ingesta IG/FB.

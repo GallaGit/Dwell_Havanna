@@ -14,11 +14,11 @@ Decisiones aprobadas por el usuario (2026-09-15):
 
 ## 1. Estado actual (punto de partida real)
 
-- `site/` Next 16.3.5 + React 19 + Tailwind 4. Rutas: `/`, `/properties`, `/properties/[slug]`, `/journal`, `/journal/[slug]`, `/about`.
-- Contenido estático en `site/lib/data.ts`: tipos `Property` y `JournalPost`, arrays `properties` (3), `journalPosts` (4), helpers `getProperty`, `getPost`. Imágenes vía helper `img()` a `images.unsplash.com`.
+- App en la raíz del repositorio: Next 16.3.5 + React 19 + Tailwind 4. Rutas: `/`, `/properties`, `/properties/[slug]`, `/journal`, `/journal/[slug]`, `/about`.
+- Contenido estático en `lib/data.ts`: tipos `Property` y `JournalPost`, arrays `properties` (3), `journalPosts` (4), helpers `getProperty`, `getPost`. Imágenes vía helper `img()` a `images.unsplash.com`.
 - Render: `app/page.tsx` (portada revista), `components/Editorial.tsx` (`SectionHeading`, `PropertyEntry`, `JournalEntry`), detalles con `generateStaticParams()`.
-- `site/next.config.ts`: `images.remotePatterns` solo permite `images.unsplash.com` y `picsum.photos`. Habrá que añadir el futuro Storage (Supabase) + CDN de Meta.
-- `site/app/layout.tsx`: metadata global genérica, sin OG por slug, sin RSS, sin sitemap. Es el primer gap para sindicación pull.
+- `next.config.ts`: `images.remotePatterns` solo permite `images.unsplash.com` y `picsum.photos`. Habrá que añadir el futuro Storage (Supabase) + CDN de Meta.
+- `app/layout.tsx`: metadata global genérica, sin OG por slug, sin RSS, sin sitemap. Es el primer gap para sindicación pull.
 - No hay DB, auth, admin, API routes, webhooks ni app Meta.
 
 Principio editorial inviolable (de `docs/Dwell-Havana_Design-Direction/Design-Direction.md`): fotografía primero, narrativa antes que CTA comercial. La automatización nunca publica directo sin aprobación humana.
@@ -97,8 +97,8 @@ Storage: bucket `dwell-media` público-lectura. Añadir su hostname a `next.conf
 
 ### 3.2 Capa de datos en Next (migración sin romper UI)
 
-- `site/lib/db.ts`: cliente Supabase server-side (service role solo en server).
-- `site/lib/content.ts`: `listPublishedProperties()`, `getPropertyBySlug()`, `listPublishedPosts()`, `getPostBySlug()` con misma firma que hoy para que `page.tsx`, `[slug]/page.tsx` y `Editorial.tsx` no cambien de props.
+- `lib/db.ts`: cliente Supabase server-side (service role solo en server).
+- `lib/content.ts`: `listPublishedProperties()`, `getPropertyBySlug()`, `listPublishedPosts()`, `getPostBySlug()` con misma firma que hoy para que `page.tsx`, `[slug]/page.tsx` y `Editorial.tsx` no cambien de props.
 - Script `scripts/migrate-static-to-db.ts`: lee `lib/data.ts` e inserta los 3 properties + 4 posts con `status='published'`. Mantener `data.ts` como fallback/seed hasta verificar.
 - Cambiar `generateStaticParams()` a leer de DB + `revalidate = 3600` (ISR) en vez de estático puro.
 

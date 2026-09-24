@@ -1,21 +1,21 @@
 # 06 — Configuración y operación
 
-Fuente: `site/.env.example`, `site/.gitignore`, `site/package.json`, `docs/Idea/Fase-1-Cierre.md §6`.
+Fuente: `.env.example`, `.gitignore`, `package.json`, `docs/Idea/Fase-1-Cierre.md §6`.
 
 Las decisiones de producto y el orden de las fases están en `docs/PRODUCT/roadmap.md`. Esta página solo documenta configuración y operación técnica.
 
 ## Variables de entorno
 
-Copiar `site/.env.example` → `site/.env.local` (gitignoreado, nunca commitear).
+Copiar `.env.example` → `.env.local` (gitignoreado, nunca commitear).
 
 | Var | Expuesta al navegador | Dónde se usa |
 |---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | Sí | `site/lib/site.ts` (OG, sitemap, feed, embeds). Default `https://dwellhavana.com` |
-| `NEXT_PUBLIC_SUPABASE_URL` | Sí | `site/lib/db.ts` |
+| `NEXT_PUBLIC_SITE_URL` | Sí | `lib/site.ts` (OG, sitemap, feed, embeds). Default `https://dwellhavana.com` |
+| `NEXT_PUBLIC_SUPABASE_URL` | Sí | `lib/db.ts` |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sí | Reservada cliente (hoy el server usa service_role) |
-| `SUPABASE_SERVICE_ROLE_KEY` | **No, solo server** | `site/lib/db.ts`, API submissions, admin e invitaciones |
+| `SUPABASE_SERVICE_ROLE_KEY` | **No, solo server** | `lib/db.ts`, API submissions, admin e invitaciones |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sí, publishable | Supabase Auth en navegador y cookies SSR |
-| `ADMIN_TOKEN` | **No, solo server** | `site/app/admin/review/page.tsx` (cookie `dh_admin`) |
+| `ADMIN_TOKEN` | **No, solo server** | `app/admin/review/page.tsx` (cookie `dh_admin`) |
 | `ADMIN_TOKEN_TTL_SECONDS` | **No, solo server** | Duración de la cookie fallback; default 7 días |
 
 > Nota: `docs/Idea/Fase-1-Cierre.md §4` cita `NEXT_PUBLIC_SUPABASE_ANON_KEY`; el `.env.example` actual usa `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (nuevo formato Supabase). Manda el `.env.example`.
@@ -34,7 +34,7 @@ Verificación Fase 1: `lint ✓` + `build ✓`.
 ## Activación (~30 min, lado humano)
 
 1. Crear proyecto Supabase → copiar URL + keys + inventar `ADMIN_TOKEN` largo en `.env.local`.
-2. SQL Editor: correr `site/supabase/01-schema.sql`, luego `site/supabase/02-seed.sql`.
+2. SQL Editor: correr `supabase/01-schema.sql`, luego `supabase/02-seed.sql`.
 3. Alta editorial: `insert into verified_contributors (handle, display_name, source) values ('@arq.habana','Nombre','ig');`
 4. Desde `/admin/review`, invitar el email del colaborador usando el handle existente.
 5. El colaborador abre el enlace recibido en `/iniciar-sesion`; no existe registro público.
