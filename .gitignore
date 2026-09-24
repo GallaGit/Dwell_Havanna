@@ -34,12 +34,12 @@ yarn-error.log*
 .env*
 !.env.example
 
+# local OpenCode authentication state
+.opencode/supabase-auth.json
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# Documentation por ahora fuera del repositorio
-Docs/
