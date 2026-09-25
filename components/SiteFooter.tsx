@@ -37,13 +37,13 @@ export default function SiteFooter() {
           </div>
           <div className="col-span-12 md:col-span-3">
             <p className="meta-label mb-4">Contact</p>
-            <p className="text-sm leading-7">
-              hola@dwellhavana.example
+            <p className="text-sm leading-7 break-all">
+              <a href="mailto:hola@dwellhavana.example" className="underline underline-offset-4 hover:opacity-70">hola@dwellhavana.example</a>
               <br />
               Havana, Cuba
             </p>
             <Link
-              href="/about#contact"
+              href="mailto:hola@dwellhavana.example"
               className="mt-5 inline-flex text-[13px] border border-ink px-5 py-2.5 hover:bg-ink hover:text-paper transition-colors"
             >
               Start a conversation

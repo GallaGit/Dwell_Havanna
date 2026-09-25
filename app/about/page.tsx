@@ -52,7 +52,9 @@ export default function AboutPage() {
 
       <div id="contact" className="mt-16 border rule p-8 md:p-12">
         <p className="meta-label mb-3">Contact</p>
-        <p className="font-display text-3xl md:text-4xl">hola@dwellhavana.example</p>
+        <a href="mailto:hola@dwellhavana.example" className="block max-w-full break-all font-display text-3xl md:text-4xl underline decoration-line underline-offset-4 hover:opacity-70">
+          hola@dwellhavana.example
+        </a>
         <p className="mt-3 text-sm leading-7 text-charcoal/80 max-w-lg">
           For visits, dossiers, editorial submissions or collaborations.
           Photography and narrative first — we reply within two working days.

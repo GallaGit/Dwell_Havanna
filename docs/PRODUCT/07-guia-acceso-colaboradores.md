@@ -27,24 +27,24 @@ El flujo tiene cinco pasos:
 
 La invitación permite enviar contenido. No publica contenido de forma automática.
 
-## Permisos editoriales futuros
+## Permisos editoriales
 
-La primera versión usa `ADMIN_TOKEN` para proteger el panel. Ese token no será el mecanismo de acceso de los moderadores.
+El panel acepta cuentas `owner` y `moderator` con Supabase Auth. `ADMIN_TOKEN` queda como fallback temporal. Ese fallback puede invitar colaboradores. No puede cambiar roles ni activar o desactivar miembros. `trusted_contributor` sigue previsto y no está en `editorial_members`.
 
-La versión prevista dará a cada miembro editorial una cuenta individual de Supabase y un permiso asignado por la propietaria:
+`owner` y `moderator` ya usan una cuenta individual de Supabase. La propietaria otorga o retira esos permisos desde `/admin/review`. Cada moderador usa su propia cuenta. El sistema registra quién aprobó o rechazó cada envío.
 
-| Rol | Función |
-|---|---|
-| `contributor` | Envía contenido y espera revisión. |
-| `trusted_contributor` | Envía contenido y crea un borrador automático, sin publicación directa. |
-| `moderator` | Revisa, aprueba y rechaza envíos. No gestiona permisos. |
-| `owner` | Gestiona colaboradores, moderadores, permisos y publicación. |
-
-La propietaria otorgará o retirará estos permisos desde un panel editorial. Cada moderador usará su propia cuenta. El sistema registrará quién aprobó o rechazó cada envío.
+| Rol | Función | Estado |
+|---|---|---|
+| `contributor` | Envía contenido y espera revisión. | Implementado en `verified_contributors`. No es una fila de `editorial_members`. |
+| `trusted_contributor` | Envía contenido y crea un borrador automático, sin publicación directa. | Previsto. No está en el esquema. |
+| `moderator` | Revisa, aprueba y rechaza envíos. Aprobar publica el post de comunidad. No gestiona permisos. | Implementado. |
+| `owner` | Gestiona colaboradores, moderadores y permisos. También aprueba y publica. | Implementado. |
 
 El permiso `trusted_contributor` no elimina la autenticación. La cuenta debe tener una sesión válida y seguir vinculada al handle correcto. La publicación automática no forma parte de esta fase.
 
 El orden de implementación está documentado en `docs/PRODUCT/roadmap.md`, sección **Evolución de permisos editoriales**.
+
+En testing, las migraciones editoriales ya están aplicadas y hay un `owner` activo, distinto del colaborador E2E. No promuevas ese colaborador a `owner`.
 
 ## Para la editora
 
@@ -67,13 +67,16 @@ Si el handle no existe, el formulario de invitación no puede asociar el email c
 ### 2. Enviar la invitación
 
 1. Abre `/admin/review`.
-2. Inicia sesión con el `ADMIN_TOKEN`.
-3. Busca la sección **Invitar colaborador**.
-4. Escribe el handle existente, por ejemplo `@arq.habana`.
-5. Escribe el email del colaborador.
-6. Selecciona **Enviar invitación**.
+2. Inicia sesión con la cuenta `owner` en `/iniciar-sesion?next=/admin/review`.
+3. Si esa cuenta no está disponible, usa **Usar acceso de emergencia** e introduce `ADMIN_TOKEN`. El token puede enviar esta invitación. No gestiona el equipo editorial.
+4. Busca la sección **Invitar colaborador**.
+5. Escribe el handle existente, por ejemplo `@arq.habana`.
+6. Escribe el email del colaborador.
+7. Selecciona **Enviar invitación**.
 
-Supabase enviará un email de acceso al colaborador.
+Supabase envía un email de acceso al colaborador. El enlace usa `NEXT_PUBLIC_SITE_URL`. Si esa variable no está definida, el servidor usa `http://localhost:3000`.
+
+Abre ese enlace en la máquina que ejecuta la app cuando la URL es `localhost`. Un invitado en otro equipo necesita una `NEXT_PUBLIC_SITE_URL` pública y esa misma URL en la allowlist de redirecciones de Supabase Auth. La confirmación remota queda diferida hasta la URL de producción.
 
 La aplicación guarda el identificador de la cuenta invitada en `verified_contributors.auth_user_id`. Ese vínculo permite comprobar que el email y el handle pertenecen al mismo colaborador.
 
@@ -84,15 +87,15 @@ Cuando el colaborador envía una foto, el envío aparece en `/admin/review` con 
 La editora puede:
 
 - Rechazar el envío.
-- Aprobarlo para crear un borrador de Journal.
+- Aprobarlo para publicarlo en Journal.
 
-Aprobar un envío no lo publica directamente. La editora debe revisar y publicar el borrador por separado.
+Antes de cada decisión, el panel pide confirmación. Aprobar cambia el envío a `approved`, crea una entrada `journal_posts` con estado `published` y la hace visible en el Journal. Rechazar cambia el envío a `rejected` y lo retira de la cola pendiente.
 
 ## Para el colaborador
 
 ### 1. Abrir el enlace de invitación
 
-Abre el enlace del email de Supabase desde el mismo navegador en el que quieres trabajar.
+Abre el enlace del email de Supabase desde el mismo navegador en el que quieres trabajar. Si el enlace apunta a `localhost`, ábrelo en el equipo donde corre la aplicación.
 
 El enlace pasa por `/auth/callback`. La aplicación cambia el código temporal por una sesión y te redirige a `/contribuir`.
 
@@ -121,7 +124,24 @@ En `/contribuir` completa estos campos:
 
 Selecciona el botón de envío después de revisar los datos.
 
-La aplicación guarda el contenido como `pending`. El contenido no aparece en la web hasta que la editora lo revise y publique.
+La aplicación guarda el contenido como `pending`. El contenido no aparece en la web hasta que la editora lo revise y confirme su publicación.
+
+## Correcciones y retiro de contenido
+
+Esta capacidad queda fuera del hito actual. La aplicación todavía no permite que un colaborador vea, edite, retire o elimine sus envíos desde el sitio.
+
+La política prevista para una fase posterior es la siguiente:
+
+- Un colaborador podrá editar el texto, reemplazar la imagen o retirar un envío mientras esté `pending`.
+- Un colaborador podrá corregir y reenviar un envío `rejected`.
+- Un colaborador podrá solicitar una corrección o el retiro de un envío `approved` o publicado.
+- Un colaborador no podrá editar directamente contenido aprobado o publicado.
+- Un `moderator` o `owner` decidirá si reabre, corrige, retira o restaura el contenido.
+- El sistema conservará el historial y evitará el borrado físico como operación normal.
+
+Los estados previstos para ese flujo son `change_requested`, `withdrawal_requested`, `withdrawn` y `unpublished`. Estos estados no existen todavía en la base de datos.
+
+Las solicitudes deberán registrar quién las creó, cuándo se crearon y qué envío afectan. La implementación también deberá registrar en `moderation_events` las decisiones editoriales relacionadas.
 
 ## Cómo se valida el acceso
 
@@ -169,8 +189,8 @@ Para una prueba manual local:
 
 1. Configura Supabase y las variables de entorno descritas en `docs/Tech/06-config-operacion.md`.
 2. Ejecuta `npm run dev`.
-3. Abre `/admin/review` e invita un email asociado a un handle existente.
-4. Abre el enlace recibido.
+3. Entra con la cuenta `owner` y, desde `/admin/review`, invita un email asociado a un handle existente. Si esa cuenta no está disponible, usa el token de emergencia.
+4. Abre el enlace recibido en este mismo equipo si la URL es `localhost`.
 5. Envía una imagen desde `/contribuir`.
 6. Confirma el envío desde `/admin/review`.
 

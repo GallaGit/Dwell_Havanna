@@ -10,19 +10,19 @@ type State =
   | { kind: "error"; message: string };
 
 const FRIENDLY: Record<string, string> = {
-  handle_and_caption_required: "Faltan tu handle o el texto.",
-  rights_required: "Debes aceptar la cesión de derechos para publicar.",
-  photo_required: "Adjunta una foto.",
-  photo_must_be_jpeg: "Solo JPEG (.jpg). Convierte la foto e inténtalo de nuevo.",
-  photo_too_large_8mb: "La foto supera 8 MB. Reduce su tamaño e inténtalo de nuevo.",
+  handle_and_caption_required: "Your handle and story are required.",
+  rights_required: "You must grant publishing rights before sending.",
+  photo_required: "Attach a photo.",
+  photo_must_be_jpeg: "JPEG files only (.jpg). Convert the photo and try again.",
+  photo_too_large_8mb: "The photo is larger than 8 MB. Reduce its size and try again.",
   unknown_contributor:
-    "Tu cuenta no está asociada a ese colaborador. Escríbenos para revisar tu invitación.",
-  authentication_required: "Inicia sesión con tu invitación antes de enviar.",
-  auth_not_configured: "El acceso de colaboradores no está activo todavía.",
-  db_not_configured: "El buzón no está activo todavía. Inténtalo más tarde.",
-  upload_failed: "Falló la subida. Revisa tu conexión e inténtalo de nuevo.",
-  save_failed: "No pudimos guardar tu envío. Inténtalo de nuevo.",
-  bad_form: "Formulario inválido.",
+    "Your account is not linked to that contributor. Contact us to review your invitation.",
+  authentication_required: "Sign in with your invitation before sending.",
+  auth_not_configured: "Contributor access is not configured yet.",
+  db_not_configured: "The submission inbox is not available yet. Try again later.",
+  upload_failed: "The upload failed. Check your connection and try again.",
+  save_failed: "We could not save your submission. Try again.",
+  bad_form: "Invalid form.",
 };
 
 export default function ContribuirPage() {
@@ -47,27 +47,27 @@ export default function ContribuirPage() {
         kind: "error",
         message:
           FRIENDLY[json?.error ?? ""] ??
-          "Algo falló. Inténtalo de nuevo.",
+          "Something went wrong. Try again.",
       });
     }
   }
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 md:px-10 pt-10 md:pt-16 pb-16">
-      <p className="meta-label mb-3">Contribuir — Solo colaboradores verificados</p>
+      <p className="meta-label mb-3">Contribute — Verified contributors only</p>
       <h1 className="font-display text-5xl md:text-7xl leading-[0.95] max-w-4xl">
-        Envía una <span className="italic font-normal">foto y su historia</span>.
+        Send a <span className="italic font-normal">photo and its story</span>.
       </h1>
       <p className="mt-5 max-w-xl text-[15px] leading-7 text-charcoal/85">
-        Tu envío entra a una cola de revisión editorial. Nada se publica
-        automáticamente: si se aprueba, aparece primero en la web y desde ahí
-        se comparte a nuestras redes con tu crédito.
+        Your submission enters an editorial review queue. Nothing is published
+        automatically: if approved, it appears on the site first and may later
+        be shared on our networks with your credit.
       </p>
       <p className="mt-4 max-w-xl text-[15px] leading-7 text-charcoal/85">
-        Solo colaboradores invitados pueden enviar. Si aún no tienes acceso, escribe al equipo editorial.
+        Only invited contributors can send work. If you do not have access yet, contact the editorial team.
       </p>
       <Link href="/iniciar-sesion" className="inline-block mt-4 text-sm underline underline-offset-4">
-        Entrar con mi invitación
+        Sign in with my invitation
       </Link>
 
       <form
@@ -75,7 +75,7 @@ export default function ContribuirPage() {
         className="mt-10 max-w-xl border-t rule pt-8 flex flex-col gap-6"
       >
         <label className="flex flex-col gap-2">
-          <span className="meta-label">Tu handle (verificado)</span>
+           <span className="meta-label">Your verified handle</span>
           <input
             name="handle"
             required
@@ -86,7 +86,7 @@ export default function ContribuirPage() {
         </label>
 
         <label className="flex flex-col gap-2">
-          <span className="meta-label">Título (opcional)</span>
+           <span className="meta-label">Title (optional)</span>
           <input
             name="title"
             maxLength={140}
@@ -96,7 +96,7 @@ export default function ContribuirPage() {
         </label>
 
         <label className="flex flex-col gap-2">
-          <span className="meta-label">Texto — qué muestra la foto</span>
+           <span className="meta-label">Story — what the photo shows</span>
           <textarea
             name="caption"
             required
@@ -108,7 +108,7 @@ export default function ContribuirPage() {
         </label>
 
         <label className="flex flex-col gap-2">
-          <span className="meta-label">Foto — JPEG, máx. 8 MB</span>
+           <span className="meta-label">Photo — JPEG, max. 8 MB</span>
           <input
             name="photo"
             type="file"
@@ -121,8 +121,8 @@ export default function ContribuirPage() {
         <label className="flex items-start gap-3 text-sm leading-6 text-charcoal/85">
           <input name="rights" value="true" type="checkbox" required className="mt-1.5" />
           <span>
-            Cedo a Dwell Havana el derecho de publicar esta foto con mi
-            crédito en la web y sus redes. Confirmo que es de mi autoría.
+             I grant Dwell Havana the right to publish this photo with my
+             credit on the site and its networks. I confirm that I created it.
           </span>
         </label>
 
@@ -131,14 +131,14 @@ export default function ContribuirPage() {
           disabled={state.kind === "sending"}
           className="inline-flex w-fit text-sm bg-ink text-paper px-7 py-3 hover:opacity-80 transition disabled:opacity-50"
         >
-          {state.kind === "sending" ? "Enviando…" : "Enviar a revisión"}
+          {state.kind === "sending" ? "Sending…" : "Send for review"}
         </button>
 
         {state.kind === "done" && (
           <p className="border border-ink p-4 text-sm leading-6">
-            Recibido. Lo revisaremos y te avisaremos si se publica.{" "}
+            Received. We will review it and let you know if it is published.{" "}
             <Link href="/" className="underline underline-offset-4">
-              Volver a la portada
+              Back to the home page
             </Link>
           </p>
         )}

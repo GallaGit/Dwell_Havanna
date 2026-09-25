@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
 
 # next.js
 /.next/
@@ -20,19 +22,30 @@
 # production
 /build
 
+# local build and tool caches
+/.turbo/
+/.cache/
+
 # misc
 .DS_Store
 *.pem
+
+# Supabase CLI local link metadata
+/supabase/.temp/
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+
+# local OpenCode authentication state
+.opencode/supabase-auth.json
 
 # vercel
 .vercel
