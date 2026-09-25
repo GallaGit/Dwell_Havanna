@@ -5,12 +5,13 @@
   --color-cream: #f3eee6;
   --color-ink: #161412;
   --color-charcoal: #2e2b27;
-  --color-muted: #837b6f;
+  /* #6f685e: mismo taupe cálido, oscurecido para AA 4.5:1 sobre paper y cream. */
+  --color-muted: #6f685e;
   --color-line: #e3dccf;
   --color-clay: #87573a;
 
-  --font-display: "Fraunces", Georgia, serif;
-  --font-body: "Inter", system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-body: var(--font-inter), system-ui, sans-serif;
 }
 
 html {

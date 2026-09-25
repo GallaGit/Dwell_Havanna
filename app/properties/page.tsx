@@ -1,7 +1,12 @@
 import { listPublishedProperties } from "@/lib/content";
+import { pageMetadata } from "@/lib/page-metadata";
 import PropertyFilters from "./PropertyFilters";
 
-export const metadata = { title: "Properties — Dwell Havana" };
+export const metadata = pageMetadata({
+  title: "Properties",
+  description: "Distinctive Havana homes presented as editorial stories, not a catalogue.",
+  path: "/properties",
+});
 export const revalidate = 3600;
 
 export default async function PropertiesPage() {

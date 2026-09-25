@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { contactEmail, contactMailto } from "@/lib/placeholders";
 
 export default function SiteFooter() {
   return (
-    <footer id="contact" className="border-t rule mt-24">
+    <footer className="border-t rule mt-24">
       <div className="mx-auto max-w-[1400px] px-5 md:px-10 py-14 md:py-20">
         <div className="editorial-grid">
           <div className="col-span-12 md:col-span-5">
@@ -38,12 +39,12 @@ export default function SiteFooter() {
           <div className="col-span-12 md:col-span-3">
             <p className="meta-label mb-4">Contact</p>
             <p className="text-sm leading-7 break-all">
-              <a href="mailto:hola@dwellhavana.example" className="underline underline-offset-4 hover:opacity-70">hola@dwellhavana.example</a>
+              <a href={contactMailto()} className="underline underline-offset-4 hover:opacity-70">{contactEmail}</a>
               <br />
               Havana, Cuba
             </p>
             <Link
-              href="mailto:hola@dwellhavana.example"
+              href={contactMailto()}
               className="mt-5 inline-flex text-[13px] border border-ink px-5 py-2.5 hover:bg-ink hover:text-paper transition-colors"
             >
               Start a conversation

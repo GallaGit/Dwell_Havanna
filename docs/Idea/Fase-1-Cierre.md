@@ -1,11 +1,11 @@
 # Fase 1 — Cierre (2026-09-15)
 
-Estado: **implementada y verificada en local** (`lint` + `build` verdes, 19 rutas).
+Estado: **implementada y verificada en local** (`lint` + `build` verdes). La build de este cierre se anotó como 19 rutas. Esa cifra no es el inventario de hoy: no incluía `/iniciar-sesion` ni `/auth/callback`. La lista vigente está en `docs/Tech/03-frontend-rutas-render.md`. La cifra 19 es de una build anterior a iconos, `robots.txt`, manifiesto y los slugs de `/embed`.
 Commits en `GallaGit/Dwell_Havanna` rama `main`:
 - `9c7d391` fundación (schema, seed, capa de contenido con fallback)
 - `a6fdcbb` cierre (este documento describe ese commit)
 
-Pendiente NO técnico: crear el proyecto Supabase y aplicar los SQL (ver §6).
+Pendiente NO técnico: restaurar el proyecto Supabase de producción (el del 2026-09-15 ya no resuelve) y aplicar los SQL (ver §6 y `docs/PRODUCT/roadmap.md`, Paso 2).
 Sin DB configurada el sitio funciona igual (fallback estático de `lib/data.ts`).
 
 ## 1. Qué se construyó
@@ -51,16 +51,22 @@ Si el insert falla tras subir, borra el archivo huérfano (best-effort).
 `NEXT_PUBLIC_SITE_URL` · `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` · `SUPABASE_SERVICE_ROLE_KEY` · `ADMIN_TOKEN`. Copiar a `.env.local` (gitignoreado). Solo `NEXT_PUBLIC_*` llega al navegador; `service_role` y `ADMIN_TOKEN` jamás salen del servidor.
 
 ## 5. Verificación hecha
-`npm run lint` ✓ · `npm run build` ✓ — 19 rutas: 7 properties/journal por slug (SSG+ISR 1h), sitemap, feed, contribuir, admin (estáticas), api submissions y embed (dinámicas). Rutas nuevas con DB ausente responden con fallback/mensajes, sin romper el build.
+`npm run lint` ✓ · `npm run build` ✓ en este cierre. El conteo de entonces (anotado como 19 rutas: 7 properties/journal por slug, sitemap, feed, contribuir, admin, api submissions y embed, más índices) es el de esa build, anterior a `/iniciar-sesion` y `/auth/callback`. La tabla posterior está en `docs/Tech/03-frontend-rutas-render.md`. Rutas con DB ausente responden con fallback o mensajes, sin romper el build.
 
-## 6. Qué falta para activar (lado humano, ~30 min)
-1. Crear proyecto Supabase → copiar URL + keys a `.env.local` (+ `ADMIN_TOKEN` inventado, largo).
-2. SQL Editor: correr `supabase/01-schema.sql`, `03-contributor-auth.sql` y luego `02-seed.sql`.
-3. Dar de alta colaboradores: `insert into verified_contributors (handle, display_name, source) values ('@arq.habana','Nombre','ig');`
-4. Invitar el email desde `/admin/review`; no existe registro público.
-5. El colaborador abre el enlace y prueba `/contribuir` → enviar → `/admin/review` → confirmar la aprobación → ver el post en `/journal` con `journal_posts.status='published'`.
-6. `NEXT_PUBLIC_SITE_URL` con el dominio real antes de compartir. Sin esa variable, OG y sitemap usan `https://dwellhavana.com`, pero el email de invitación usa `http://localhost:3000`. Un invitado remoto necesita la URL pública y esa URL en la allowlist de redirecciones de Supabase Auth.
-7. Validadores: Meta Sharing Debugger (un slug de property y uno de journal) + `/feed.xml` + `/sitemap.xml` en producción.
+## 6. Qué falta para activar (lado humano)
+
+Hosting, dominio (`dwellhavana.com`, renovación antes del 2026-10-06), DNS apex y `www`, Site URL y allowlist están en `docs/PRODUCT/roadmap.md`, Paso 2. El orden SQL es el mismo que en `docs/Tech/06-config-operacion.md`:
+
+1. `supabase/01-schema.sql`
+2. `supabase/03-contributor-auth.sql`
+3. `supabase/04-editorial-permissions.sql`
+4. `supabase/migrations/20260921000300_editorial_member_management.sql`
+5. `supabase/02-seed.sql`, solo si se quiere el contenido de ejemplo
+6. Alta del primer `owner` en `editorial_members` con su `auth_user_id`
+
+El 2026-09-15 este proyecto ya tenía `01-schema`, `02-seed`, colaboradores y el bucket `dwell-media` (§8). Hoy no resuelve. Esas cuatro piezas quedan a re-verificar.
+
+Después: dar de alta colaboradores (`insert into verified_contributors ...`), invitar el email desde `/admin/review` (no hay registro público), probar `/contribuir` → aprobar → `journal_posts.status='published'`, fijar `NEXT_PUBLIC_SITE_URL` y la allowlist `https://<dominio>/auth/callback`, y validar feed, sitemap y un slug en el Sharing Debugger.
 
 ## 7. Siguiente (Fase 2, no empezada)
 `POST /api/syndicate` (cola + reintentos, preview FB vs IG, log en `syndications`) + checklist app Meta del plan (cuenta IG Profesional, Page vinculada, PPA, App Review). Requiere Fase 1 activa en producción.

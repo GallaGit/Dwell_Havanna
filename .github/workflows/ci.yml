@@ -20,3 +20,5 @@ jobs:
       # Unit tests. tests/submissions-http.e2e.test.mjs skips unless E2E_* is set.
       # Do not add those secrets to this workflow.
       - run: npm test
+      # Build does not need Supabase secrets. Public env vars fall back in code.
+      - run: npm run build

@@ -1,17 +1,26 @@
-import { getServiceClient } from "./db";
+import { cache } from "react";
+import { getPublishedContentClient } from "./db";
 import {
   properties as staticProperties,
   journalPosts as staticPosts,
   type Property,
   type JournalPost,
 } from "./data";
+import { journalPlaceholderParagraphs } from "./placeholders";
 
 /**
  * Capa de contenido — Fase 1.
  * Lee de Supabase (solo `status = 'published'`); si no hay DB configurada
  * o la consulta falla, cae al dataset estático de lib/data.ts.
  * Misma forma que antes: las páginas no cambian de props.
+ *
+ * `cache()` deduplica la lectura dentro de la misma petición
+ * (`generateMetadata` y la página).
  */
+
+const PROPERTY_COLUMNS =
+  "slug,name,location,character,description,cover,images,facts,architecture,interior,story";
+const POST_COLUMNS = "slug,title,category,excerpt,image,date_label,reading_time";
 
 type PropertyRow = {
   slug: string;
@@ -62,18 +71,17 @@ function toPost(row: JournalRow): JournalPost {
     image: row.image,
     date: row.date_label,
     readingTime: row.reading_time,
+    body: journalPlaceholderParagraphs,
   };
 }
 
-export async function listPublishedProperties(): Promise<Property[]> {
+export const listPublishedProperties = cache(async (): Promise<Property[]> => {
   try {
-    const db = getServiceClient();
+    const db = getPublishedContentClient();
     if (!db) return staticProperties;
     const { data, error } = await db
       .from("properties")
-      .select(
-        "slug,name,location,character,description,cover,images,facts,architecture,interior,story"
-      )
+      .select(PROPERTY_COLUMNS)
       .eq("status", "published")
       .order("published_at", { ascending: false });
     if (error || !data) return staticProperties;
@@ -81,22 +89,35 @@ export async function listPublishedProperties(): Promise<Property[]> {
   } catch {
     return staticProperties;
   }
-}
+});
 
-export async function getPropertyBySlug(
-  slug: string
-): Promise<Property | undefined> {
-  const all = await listPublishedProperties();
-  return all.find((p) => p.slug === slug);
-}
+export const getPropertyBySlug = cache(
+  async (slug: string): Promise<Property | undefined> => {
+    try {
+      const db = getPublishedContentClient();
+      if (!db) return staticProperties.find((property) => property.slug === slug);
+      const { data, error } = await db
+        .from("properties")
+        .select(PROPERTY_COLUMNS)
+        .eq("status", "published")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (error) return staticProperties.find((property) => property.slug === slug);
+      if (!data) return undefined;
+      return toProperty(data as PropertyRow);
+    } catch {
+      return staticProperties.find((property) => property.slug === slug);
+    }
+  },
+);
 
-export async function listPublishedPosts(): Promise<JournalPost[]> {
+export const listPublishedPosts = cache(async (): Promise<JournalPost[]> => {
   try {
-    const db = getServiceClient();
+    const db = getPublishedContentClient();
     if (!db) return staticPosts;
     const { data, error } = await db
       .from("journal_posts")
-      .select("slug,title,category,excerpt,image,date_label,reading_time")
+      .select(POST_COLUMNS)
       .eq("status", "published")
       .order("published_at", { ascending: false });
     if (error || !data) return staticPosts;
@@ -104,11 +125,24 @@ export async function listPublishedPosts(): Promise<JournalPost[]> {
   } catch {
     return staticPosts;
   }
-}
+});
 
-export async function getPostBySlug(
-  slug: string
-): Promise<JournalPost | undefined> {
-  const all = await listPublishedPosts();
-  return all.find((p) => p.slug === slug);
-}
+export const getPostBySlug = cache(
+  async (slug: string): Promise<JournalPost | undefined> => {
+    try {
+      const db = getPublishedContentClient();
+      if (!db) return staticPosts.find((post) => post.slug === slug);
+      const { data, error } = await db
+        .from("journal_posts")
+        .select(POST_COLUMNS)
+        .eq("status", "published")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (error) return staticPosts.find((post) => post.slug === slug);
+      if (!data) return undefined;
+      return toPost(data as JournalRow);
+    } catch {
+      return staticPosts.find((post) => post.slug === slug);
+    }
+  },
+);

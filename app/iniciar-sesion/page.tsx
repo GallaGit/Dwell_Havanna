@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { safeRedirectPath } from "@/lib/safe-redirect";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export default function SignInPage() {
@@ -31,7 +32,7 @@ export default function SignInPage() {
     }
 
     const requestedNext = new URLSearchParams(window.location.search).get("next");
-    const next = requestedNext?.startsWith("/") ? requestedNext : "/contribuir";
+    const next = safeRedirectPath(requestedNext, window.location.origin);
     const { error: authError } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,
       options: {

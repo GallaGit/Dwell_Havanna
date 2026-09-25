@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dwell Havana
 
-## Getting Started
+Revista editorial digital sobre arquitectura, interiores, cultura y casas de La Habana. La web es la fuente canónica. Nada se publica sin revisión humana.
 
-First, run the development server:
+## Stack
+
+Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4 y Supabase (Auth, Postgres y Storage).
+
+## Scripts
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev      # desarrollo
+npm run lint     # eslint
+npm test         # node:test; el E2E HTTP se omite sin variables E2E_*
+npm run build    # build de producción; no requiere secretos de Supabase
+npm run start    # sirve el build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copia `.env.example` a `.env.local`. No commitees secretos. El email de contacto es `NEXT_PUBLIC_CONTACT_EMAIL`. Si falta, el sitio muestra `hola@dwellhavana.example`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Las páginas públicas se prerenderizan (estáticas o ISR de una hora). El login, `/admin/review`, `POST /api/submissions` y `/auth/callback` siguen dinámicos.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Para listar el SQL canónico sin aplicarlo:
 
-## Learn More
+```bash
+scripts/apply-canonical-sql.sh
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Documentación
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+La documentación canónica está en [`docs/README.md`](docs/README.md). El trabajo de código previo al despliegue está en [`docs/Tech/07-rendimiento.md`](docs/Tech/07-rendimiento.md) y en [`docs/PRODUCT/contenido-placeholder.md`](docs/PRODUCT/contenido-placeholder.md). Lo que queda fuera del repositorio es el Paso 2 de [`docs/PRODUCT/roadmap.md`](docs/PRODUCT/roadmap.md).

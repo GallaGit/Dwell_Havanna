@@ -1,3 +1,14 @@
+/**
+ * Textos de ejemplo de properties y journal.
+ * Las URLs de foto y el cuerpo repetido de los posts están en lib/placeholders.ts.
+ */
+
+import {
+  journalPlaceholderParagraphs,
+  placeholderImage,
+  placeholderPhoto,
+} from "./placeholders";
+
 export type Property = {
   slug: string;
   name: string;
@@ -20,10 +31,11 @@ export type JournalPost = {
   image: string;
   date: string;
   readingTime: string;
+  /** PLACEHOLDER compartido hasta que cada post tenga cuerpo propio. */
+  body: readonly string[];
 };
 
-const img = (id: string, w = 1600) =>
-  `https://images.unsplash.com/${id}?q=80&w=${w}&auto=format&fit=crop`;
+const img = placeholderImage;
 
 export const properties: Property[] = [
   {
@@ -33,12 +45,12 @@ export const properties: Property[] = [
     character: "Modernist villa · courtyard · terrazzo",
     description:
       "A 1938 modernist villa where sea light moves across terrazzo, timber screens and a quiet central patio.",
-    cover: img("photo-1600585154340-be6161a56a0c"),
+    cover: img(placeholderPhoto.casaMiramar),
     images: [
-      img("photo-1600585154340-be6161a56a0c"),
-      img("photo-1600607687939-ce8a6c25118c"),
-      img("photo-1600566753086-00f18fb6b3ea"),
-      img("photo-1502005229762-cf1b2da7c5d6"),
+      img(placeholderPhoto.casaMiramar),
+      img(placeholderPhoto.casaMiramarInterior),
+      img(placeholderPhoto.casaMiramarRoom),
+      img(placeholderPhoto.casaMiramarDetail),
     ],
     facts: [
       { label: "District", value: "Miramar" },
@@ -61,11 +73,11 @@ export const properties: Property[] = [
     character: "1950s apartment · breeze-block · balcony",
     description:
       "A corner apartment in El Vedado where breeze-block, mosaic and a long balcony frame daily life above the street.",
-    cover: img("photo-1522708323590-d24dbb6b0267"),
+    cover: img(placeholderPhoto.vedado),
     images: [
-      img("photo-1522708323590-d24dbb6b0267"),
-      img("photo-1502672260266-1c1ef2d93688"),
-      img("photo-1493809842364-78817add7ffb"),
+      img(placeholderPhoto.vedado),
+      img(placeholderPhoto.vedadoLiving),
+      img(placeholderPhoto.vedadoRoom),
     ],
     facts: [
       { label: "District", value: "El Vedado" },
@@ -88,11 +100,11 @@ export const properties: Property[] = [
     character: "Colonial patio house · lime · timber",
     description:
       "A colonial patio house in Centro where thick walls, shutters and a single orange tree order the day.",
-    cover: img("photo-1512917774080-9991f1c4c750"),
+    cover: img(placeholderPhoto.colon),
     images: [
-      img("photo-1512917774080-9991f1c4c750"),
-      img("photo-1533090161767-e6ffed986c88"),
-      img("photo-1505691938895-1758d7feb511"),
+      img(placeholderPhoto.colon),
+      img(placeholderPhoto.colonGallery),
+      img(placeholderPhoto.colonRoom),
     ],
     facts: [
       { label: "District", value: "Centro Habana" },
@@ -117,9 +129,10 @@ export const journalPosts: JournalPost[] = [
     category: "Interiors",
     excerpt:
       "Morning in Vedado is measured in slats — a study of how timber screens soften the tropical sun into inhabitable calm.",
-    image: img("photo-1600210492486-724fe5c67fb0", 1200),
+    image: img(placeholderPhoto.journalLight, 1200),
     date: "No. 04 — September 2026",
     readingTime: "6 min",
+    body: journalPlaceholderParagraphs,
   },
   {
     slug: "terrazzo-memory",
@@ -127,9 +140,10 @@ export const journalPosts: JournalPost[] = [
     category: "Materials",
     excerpt:
       "Poured, ground and polished in place — terrazzo carries aggregate, labour and time in a single surface.",
-    image: img("photo-1600607687920-4e2a09cf159d", 1200),
+    image: img(placeholderPhoto.journalTerrazzo, 1200),
     date: "No. 03 — August 2026",
     readingTime: "5 min",
+    body: journalPlaceholderParagraphs,
   },
   {
     slug: "patio-houses",
@@ -137,9 +151,10 @@ export const journalPosts: JournalPost[] = [
     category: "Architecture",
     excerpt:
       "Two centuries on, the patio remains Havana's most intelligent room — climate, privacy and community at once.",
-    image: img("photo-1600566752355-35792bedcfea", 1200),
+    image: img(placeholderPhoto.journalPatio, 1200),
     date: "No. 02 — July 2026",
     readingTime: "8 min",
+    body: journalPlaceholderParagraphs,
   },
   {
     slug: "people-who-restore",
@@ -147,9 +162,10 @@ export const journalPosts: JournalPost[] = [
     category: "People",
     excerpt:
       "Carpenters, masons and ironworkers keeping tacit knowledge alive — portraits from three workshops in Centro.",
-    image: img("photo-1504307651254-35680f356dfd", 1200),
+    image: img(placeholderPhoto.journalPeople, 1200),
     date: "No. 01 — June 2026",
     readingTime: "7 min",
+    body: journalPlaceholderParagraphs,
   },
 ];
 

@@ -1,7 +1,25 @@
-import { getPropertyBySlug, getPostBySlug } from "@/lib/content";
+import {
+  getPropertyBySlug,
+  getPostBySlug,
+  listPublishedPosts,
+  listPublishedProperties,
+} from "@/lib/content";
+import { deliveryImageUrl } from "@/lib/image-delivery";
 import { canonicalFor } from "@/lib/site";
 
 export const revalidate = 3600;
+
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+  const [properties, posts] = await Promise.all([
+    listPublishedProperties(),
+    listPublishedPosts(),
+  ]);
+  const slugs = new Set<string>([
+    ...properties.map((property) => property.slug),
+    ...posts.map((post) => post.slug),
+  ]);
+  return [...slugs].map((slug) => ({ slug }));
+}
 
 function esc(s: string): string {
   return s
@@ -31,14 +49,17 @@ export async function GET(
   const subtitle = property
     ? `${property.location} — ${property.character}`
     : `${post!.category} — ${post!.date}`;
-  const image = property ? property.cover : post!.image;
+  const image = deliveryImageUrl(property ? property.cover : post!.image);
   const url = property
     ? canonicalFor(`/properties/${property.slug}`)
     : canonicalFor(`/journal/${post!.slug}`);
 
-  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{margin:0;font-family:Georgia,serif;background:#faf8f4;color:#1a1a1a}a{color:inherit;text-decoration:none}img{display:block;width:100%;height:auto}.wrap{max-width:480px}.meta{padding:12px 14px}.kicker{font-family:Arial,sans-serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#777;margin:0 0 6px}.title{font-size:19px;line-height:1.25;margin:0 0 8px}.brand{font-family:Arial,sans-serif;font-size:11px;color:#777}.brand b{color:#1a1a1a}</style></head><body><a href="${esc(url)}" target="_blank" rel="noopener"><div class="wrap"><img src="${esc(image)}" alt="${esc(title)}" loading="lazy"><div class="meta"><p class="kicker">${esc(subtitle)}</p><p class="title">${esc(title)}</p><p class="brand">Vía <b>Dwell Havana</b> — guía editorial de arquitectura habanera</p></div></div></a></body></html>`;
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{margin:0;font-family:Georgia,serif;background:#faf8f4;color:#1a1a1a}a{color:inherit;text-decoration:none}img{display:block;width:100%;height:auto}.wrap{max-width:480px}.meta{padding:12px 14px}.kicker{font-family:Arial,sans-serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#6f685e;margin:0 0 6px}.title{font-size:19px;line-height:1.25;margin:0 0 8px}.brand{font-family:Arial,sans-serif;font-size:11px;color:#6f685e}.brand b{color:#1a1a1a}</style></head><body><a href="${esc(url)}" target="_blank" rel="noopener"><div class="wrap"><img src="${esc(image)}" alt="${esc(title)}" width="1200" height="800" loading="lazy"><div class="meta"><p class="kicker">${esc(subtitle)}</p><p class="title">${esc(title)}</p><p class="brand">Vía <b>Dwell Havana</b> — guía editorial de arquitectura habanera</p></div></div></a></body></html>`;
 
   return new Response(html, {
-    headers: { "Content-Type": "text/html; charset=utf-8" },
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=31532400",
+    },
   });
 }
