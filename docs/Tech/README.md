@@ -22,6 +22,7 @@
 5. Los flujos editoriales viven en `docs/PRODUCT/05-flujos-editoriales.md`, no en esta carpeta.
 6. `06-config-operacion.md` — env vars, scripts, activación Supabase, seguridad.
 7. `07-rendimiento.md` — Lighthouse local contra `next start`, objetivos y qué se midió.
+8. `08-estado-supabase-2026-09-25.md` — producción y testing al 2026-09-25, SQL aplicado y deuda de migraciones.
 
 ## Documentación de producto
 
@@ -38,6 +39,7 @@ Los documentos de roadmap, flujos editoriales y uso del sistema viven en [`../PR
 - Contenido: `properties` (3) + `journal_posts` (4), solo `status='published'` llega a la web, ISR `revalidate 3600`.
 - Flujo humano obligatorio: nada se publica sin pasar por `/admin/review`.
 - Permisos editoriales: cuentas `owner` y `moderator`. Aprobar, tras confirmación, inserta `journal_posts.status='published'`. `ADMIN_TOKEN` es el fallback temporal.
+- Supabase al 2026-09-25: producción `sfujmwumtzuzwwhfmyxa` con el esquema de 7 tablas y el seed; testing `ypeizxnafipvojpntsaw` con dos `owner`. Detalle en `08-estado-supabase-2026-09-25.md`.
 - Fuente de verdad editorial: `docs/Dwell-Havana_Design-Direction/Design-Direction.md`. El comportamiento vigente de moderación está en `docs/PRODUCT/05-flujos-editoriales.md`. `docs/Idea/Fase-1-Cierre.md` conserva el cierre del 2026-09-15 y señala dónde el código cambió.
 
 ## Convención

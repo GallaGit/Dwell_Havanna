@@ -36,7 +36,7 @@ Regla: aprobar publica directamente el envío de comunidad en Journal después d
 
 ## 3. Evolución de permisos editoriales
 
-La migración ya está implementada en código y en las migraciones SQL. El panel acepta cuentas editoriales individuales. En testing ya hay un `owner`. `ADMIN_TOKEN` sigue como fallback temporal hasta verificar ese acceso en producción.
+La migración ya está implementada en código, en testing y, desde el 2026-09-25, en producción. El panel acepta cuentas editoriales individuales. Testing tiene dos `owner` activos. Producción todavía no tiene filas en `editorial_members`: falta la cuenta de Ociel. `ADMIN_TOKEN` sigue como fallback temporal hasta verificar ese acceso en producción. El recuento está en `docs/Tech/08-estado-supabase-2026-09-25.md`.
 
 El modelo usa una cuenta individual de Supabase para cada miembro editorial:
 
