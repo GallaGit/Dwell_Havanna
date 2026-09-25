@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { listPublishedProperties, listPublishedPosts } from "@/lib/content";
 import { SectionHeading, PropertyEntry, JournalEntry } from "@/components/Editorial";
+import { getSupabaseServerClient } from "@/lib/supabase-server";
 
 export const revalidate = 3600;
 
@@ -10,6 +11,8 @@ export default async function Home() {
     listPublishedProperties(),
     listPublishedPosts(),
   ]);
+  const supabase = await getSupabaseServerClient();
+  const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
   const [featured, ...rest] = properties;
 
   return (
@@ -169,6 +172,21 @@ export default async function Home() {
             </p>
             <Link href="/about" className="mt-6 inline-flex text-[13px] border border-ink px-5 py-2.5 hover:bg-ink hover:text-paper transition-colors">
               About Dwell Havana
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t rule py-14 md:py-20">
+        <div className="editorial-grid items-end">
+          <div className="col-span-12 md:col-span-7">
+            <p className="meta-label mb-3">Community</p>
+            <h2 className="font-display text-3xl md:text-5xl leading-[1.05]">Have a Havana story to share?</h2>
+          </div>
+          <div className="col-span-12 md:col-span-4 md:col-start-9">
+            <p className="text-[15px] leading-7 text-charcoal/85">Verified contributors can send a photograph and its story for editorial review.</p>
+            <Link href={user ? "/contribuir" : "/iniciar-sesion?next=/contribuir"} className="mt-5 inline-flex border border-ink px-5 py-2.5 text-[13px] hover:bg-ink hover:text-paper transition-colors">
+              {user ? "Contribute a story" : "Sign in to contribute"}
             </Link>
           </div>
         </div>

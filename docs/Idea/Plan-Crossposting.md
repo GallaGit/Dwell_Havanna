@@ -2,6 +2,8 @@
 
 > **ESTADO 2026-09-15: Fase 1 IMPLEMENTADA** (commits `9c7d391` + `a6fdcbb` en `main`).
 > Detalle y pendientes de activación en `Fase-1-Cierre.md`.
+>
+> **Aprobación vigente (2026-09-24):** `/admin/review` no crea un borrador. Tras la confirmación, aprobar inserta `journal_posts` con `status='published'`. El diagrama de la sección 2 y el §3.3 describen el plan original. El comportamiento actual está en `docs/PRODUCT/05-flujos-editoriales.md`.
 
 > Híbrido bidireccional + curado, a medida en Next.js.
 > Colaboradores verificados → moderación editorial → web como canónico → push automático a FB/IG + sindicación pull a sitios terceros relevantes.
@@ -105,7 +107,7 @@ Storage: bucket `dwell-media` público-lectura. Añadir su hostname a `next.conf
 ### 3.3 Rutas nuevas Fase 1
 
 - `GET /contribuir` (formulario ligero, mobile-first, funciona con 3G Cuba): nombre/handle (validado contra `verified_contributors`), foto, título, texto, checkbox obligatorio `rights_granted` ("cedo a Dwell Havana derecho de publicación con crédito"). `POST /api/submissions` guarda + sube imagen a Storage.
-- `/admin/review`: lista `submissions pending` con preview, botones aprobar (crea draft en `properties` o `journal_posts`) / rechazar. Auth mínima: middleware con `ADMIN_TOKEN` en env + cookie httpOnly. No montar NextAuth todavía.
+- `/admin/review`: lista `submissions pending` con preview, botones aprobar / rechazar. El plan original creaba un draft en `properties` o `journal_posts`. El código actual, tras la confirmación, inserta solo un post de comunidad con `status='published'`. No crea properties desde la cola. El acceso es una cuenta `owner` o `moderator`. `ADMIN_TOKEN` y la cookie httpOnly quedan como fallback temporal.
 - `GET /feed.xml` (RSS de journal + properties), `GET /sitemap.xml`, `GET /embed/[slug]` (iframe claro para terceros).
 - `generateMetadata()` por slug en `properties/[slug]/page.tsx` y `journal/[slug]/page.tsx`: `title`, `description`, `openGraph.images[0]=cover`, `alternates.canonical=https://dwellhavana.com/...`. Hoy solo hay metadata global en `layout.tsx`.
 

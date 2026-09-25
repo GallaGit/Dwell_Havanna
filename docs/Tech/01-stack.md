@@ -44,7 +44,8 @@ Helpers propios: `.editorial-grid` (12 col), `.meta-label`, `.rule`, `.img-edito
 
 ## Lo que NO hay (decisión implícita)
 
-- Sin ORM, sin NextAuth, sin CMS headless, sin librería de formularios, sin tests, sin i18n.
-- Admin mínimo propio con `ADMIN_TOKEN` + cookie `dh_admin` (ver `05`).
+- Sin ORM, sin NextAuth, sin CMS headless, sin librería de formularios, sin i18n.
+- Pruebas con `node:test`: `npm test`. El E2E HTTP queda omitido si no hay variables `E2E_*`.
+- Acceso editorial con Supabase Auth y roles `owner` o `moderator`. `ADMIN_TOKEN` y la cookie `dh_admin` quedan como fallback temporal (ver `docs/PRODUCT/05-flujos-editoriales.md`).
 - `README.md` es el default de `create-next-app`, no describe este proyecto — este `Tech/` lo sustituye en la práctica.
 - `AGENTS.md` / `CLAUDE.md` solo contienen la regla de agente de Next (leer `node_modules/next/dist/docs/` antes de codificar).
