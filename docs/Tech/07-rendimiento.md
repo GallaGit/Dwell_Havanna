@@ -9,7 +9,7 @@ En móvil, contra `next start`:
 - Performance ≥ 90
 - Accesibilidad ≥ 95
 
-Best practices y SEO se anotan, sin un umbral propio. Hay que repetir la medición en el dominio de producción (Paso 2 del roadmap).
+Best practices y SEO se anotan, sin un umbral propio. En móvil, el rendimiento de esta pasada queda entre 93 y 98, y la accesibilidad en 100. Hay que repetir la medición cuando exista la URL pública. El proyecto está subido a Vercel y el despliegue todavía no está verificado (Paso 2 del roadmap).
 
 ## Cómo se midió
 

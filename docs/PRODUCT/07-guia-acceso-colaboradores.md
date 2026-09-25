@@ -42,7 +42,7 @@ El panel acepta cuentas `owner` y `moderator` con Supabase Auth. `ADMIN_TOKEN` q
 
 El orden de implementación está documentado en `docs/PRODUCT/roadmap.md`, sección **Evolución de permisos editoriales**.
 
-En testing, las migraciones editoriales ya están aplicadas y hay un `owner` activo, distinto del colaborador E2E. No promuevas ese colaborador a `owner`.
+En testing, las migraciones editoriales ya están aplicadas y hay dos `owner` activos. El colaborador E2E sigue siendo colaborador. En producción el esquema está aplicado y la fila `owner` de Ociel todavía no existe.
 
 ## Para la editora
 

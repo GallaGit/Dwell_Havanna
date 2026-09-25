@@ -1,15 +1,16 @@
+-- PROD PLAN · Paso 2/4 · migration name: prod_02_canonical_01_schema
+-- Contenido: supabase/01-schema.sql VERBATIM (blob 962f0f3).
+-- Tras el paso 1 es idempotente en prod: todas las tablas/índices/bucket ya existen
+-- (create ... if not exists / on conflict do nothing / enable RLS no-op).
+-- Único efecto real: drop + create de la policy "dwell-media public read" (idéntica),
+-- atómico dentro de la transacción de la migración. Se incluye para dejar el
+-- esquema base registrado y garantizar que prod coincide con el archivo canónico.
+-- ─────────────────────────────────────────────────────────────────────────────
 -- Dwell Havana — Fase 1: schema canónico
+-- Aplicar en Supabase Dashboard → SQL Editor, en este orden:
+--   1) 01-schema.sql (este archivo)
+--   2) 02-seed.sql (contenido inicial migrado desde site/lib/data.ts)
 -- Bucket público `dwell-media` para covers/galerías (lectura pública, escritura solo service_role).
---
--- En una base nueva, este archivo va primero. Después: 03-contributor-auth.sql,
--- 04-editorial-permissions.sql, migrations/20260921000300_editorial_member_management.sql
--- y, solo para el ejemplo, 02-seed.sql (espejo de lib/data.ts).
--- El procedimiento está en docs/Tech/06-config-operacion.md.
---
--- Si verified_contributors ya existe sin auth_user_id, ejecuta 03-contributor-auth.sql
--- antes de este archivo. create table if not exists no altera la tabla vieja, y el
--- índice verified_contributors_auth_user_idx falla con
--- column "auth_user_id" does not exist. Producción se migró en ese orden el 2026-09-25.
 
 -- ── Propiedades (espejo de type Property en lib/data.ts + workflow) ──
 create table if not exists properties (

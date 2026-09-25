@@ -108,7 +108,7 @@ Las optimizaciones de imagen ya están en `main` desde el PR #2 (`c100222`, `per
 
 ## Evolución de permisos editoriales
 
-Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. En testing ya hay un `owner` activo. `ADMIN_TOKEN` queda como fallback temporal hasta verificar ese acceso individual en producción.
+Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. En testing hay dos `owner` activos. Producción tiene el esquema y todavía no tiene ninguna fila en `editorial_members`. `ADMIN_TOKEN` queda como fallback temporal hasta verificar el acceso individual de Ociel en producción.
 
 ### Modelo decidido y base implementada
 
@@ -195,7 +195,7 @@ Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. En testing ya hay 
 
 ## Preparación de producción en el código
 
-Hecho en el repositorio el 2026-09-25. No despliega ni toca Supabase.
+Hecho en el repositorio el 2026-09-25, en el PR #9. Esta lista es el código. El SQL de las bases se aplicó el mismo día y está en el Paso 2.
 
 - [x] Corregir el open redirect de `/iniciar-sesion` (`lib/safe-redirect.ts`). Viene del PR #8.
 - [x] Añadir `npm run build` a CI. Viene del PR #8.
@@ -208,54 +208,56 @@ Hecho en el repositorio el 2026-09-25. No despliega ni toca Supabase.
 - [x] Añadir `metadataBase`, Open Graph por defecto, `app/robots.ts`, manifiesto e iconos provisionales.
 - [x] Centralizar fotos, párrafos y email de prueba en `lib/placeholders.ts`. El email real es `NEXT_PUBLIC_CONTACT_EMAIL`.
 - [x] Documentar el SQL canónico en `scripts/apply-canonical-sql.sh` (dry-run por defecto).
-- [x] Medir Lighthouse local contra `next start`. Resultados en `docs/Tech/07-rendimiento.md`.
+- [x] Medir Lighthouse local contra `next start`. En móvil, rendimiento 93–98 y accesibilidad 100. Tabla en `docs/Tech/07-rendimiento.md`.
 - [x] Hacer funcional el filtro de temas de `/journal` (`app/journal/JournalIndex.tsx`). Antes los chips no filtraban.
+
+El PR #9 (`6f0e354`) ya está en `main` y sustituye al #8, cerrado sin fusionar.
 
 ## Paso 2: activar Supabase y producción
 
-Requiere credenciales y acciones de la dueña, fuera del repositorio. El código está preparado para Vercel. No hay proyecto de hosting creado.
+El SQL de producción ya está aplicado. El sitio todavía no está verificado en un dominio público. El registro fechado está en `docs/Tech/08-estado-supabase-2026-09-25.md`. El orden SQL, según el punto de partida, está en `docs/Tech/06-config-operacion.md`.
 
-Este paso activa producción. Las migraciones editoriales ya están en el repositorio y en testing. En producción se aplican con el orden SQL de abajo, antes de retirar `ADMIN_TOKEN`. El script `scripts/apply-canonical-sql.sh` lista ese orden y, con `--apply`, lo ejecuta si hay `DATABASE_URL` y `psql`. El ref `sfujmwumtzuzwwhfmyxa` queda bloqueado salvo `--allow-production`.
+`scripts/apply-canonical-sql.sh` lista el orden de una base nueva. Con `--apply`, cada archivo va en una transacción. El ref `sfujmwumtzuzwwhfmyxa` queda bloqueado salvo `--allow-production`. Producción ya pasó por ese SQL: no lo repitas.
 
-El 2026-09-15 el proyecto de producción (`sfujmwumtzuzwwhfmyxa`, `docs/Idea/Fase-1-Cierre.md` §8) ya tenía `supabase/01-schema.sql`, `supabase/02-seed.sql`, colaboradores en `verified_contributors` y el bucket `dwell-media`. Ese proyecto ahora no resuelve (probable pausa o borrado). Esas cuatro piezas quedan **a re-verificar**, no como hechas.
+### Supabase producción, hecho el 2026-09-25
 
-### Hosting, dominio y variables
+- [x] Proyecto `sfujmwumtzuzwwhfmyxa` (Dwell_Havanna_DB, organización `oxfilxdghpzkqyvtjkiy`, `ca-central-1`) activo.
+- [x] Aplicar el esquema editorial. El orden usado fue el del esquema anterior a `03`: primero `03-contributor-auth.sql`, después `01-schema.sql`. Versiones y archivos en `supabase/prod-applied/2026-09-25/`.
+- [x] Conservar el seed del 2026-09-15: 3 `properties` y 4 `journal_posts`, publicadas.
+- [x] Borrar los 2 colaboradores de prueba. `verified_contributors` quedó en 0 filas.
+- [x] Dejar el bucket `dwell-media` público, con la policy `dwell-media public read`, y 0 objetos.
+- [x] Quitar `EXECUTE` de `anon`, `authenticated` y `public` sobre `public.rls_auto_enable()`.
 
-- [ ] Crear el proyecto en Vercel (el hosting previsto) y conectar este repositorio.
-- [ ] Renovar el dominio `dwellhavana.com` antes del 2026-10-06.
+Siete tablas, RLS activo y 0 policies. Cero usuarios Auth. Cero filas en `editorial_members`.
+
+### Pendiente de lanzamiento, a cargo de Ociel
+
+- [ ] Invitar la cuenta de Ociel en Supabase Auth. Después, insertar su fila `owner` en `editorial_members`. La columna es clave foránea a `auth.users`, así que el usuario tiene que existir antes del `insert`.
+- [ ] Activar en el dashboard de Auth la protección de contraseñas filtradas.
+- [ ] Confirmar la URL del despliegue en Vercel y las variables de entorno. El proyecto ya está subido. El despliegue y las variables no están verificados, y falta la URL.
+- [ ] Renovar `dwellhavana.com` antes del 2026-10-06.
 - [ ] Apuntar el DNS del apex y de `www` al hosting.
-- [ ] Restaurar o recrear el proyecto Supabase de producción y aplicar las migraciones en el orden de abajo.
+- [ ] Sustituir las imágenes y los textos de `lib/placeholders.ts`. Esa sustitución bloquea el lanzamiento (`docs/PRODUCT/contenido-placeholder.md`).
+
+### Hosting, Auth y medición
+
 - [ ] En Supabase Auth, fijar la Site URL `https://dwellhavana.com` y la allowlist `https://dwellhavana.com/auth/callback`. Si el sitio también responde en `www`, permitir ese host.
 - [ ] Configurar las plantillas Invite user y Magic Link con `token_hash` y `type`, como en `docs/Tech/06-config-operacion.md`.
 - [ ] Configurar en Vercel `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_TOKEN` y, cuando exista el buzón, `NEXT_PUBLIC_CONTACT_EMAIL`.
-- [ ] Desplegar la aplicación.
-- [ ] Confirmar que ninguna variable secreta se expone al navegador.
+- [ ] Confirmar que el despliegue responde y que ninguna variable secreta se expone al navegador.
 - [ ] Ejecutar Lighthouse contra el dominio de producción. Objetivo: Performance ≥ 90 y Accesibilidad ≥ 95 en móvil (`docs/Tech/07-rendimiento.md`).
-- [ ] Sustituir imágenes, textos e iconos provisionales (`docs/PRODUCT/contenido-placeholder.md`).
+- [ ] Sustituir iconos provisionales junto con el resto de placeholders.
+- [ ] Invitar colaboradores mediante `/admin/review` y comprobar el vínculo Auth ↔ `verified_contributors`.
 
 La plantilla de los emails de invitación y de magic link está en `docs/Tech/06-config-operacion.md`.
 
-### Orden SQL canónico
+### Orden SQL
 
-Aplicar en el SQL Editor, en este orden. Los nombres son los archivos del repositorio. El mismo orden está en `docs/Tech/06-config-operacion.md` y en `docs/Idea/Fase-1-Cierre.md` §6.
+El orden depende de la base. En producción, el 2026-09-25, ya se aplicó el de una base con el esquema anterior a `03`. No hay que repetirlo.
 
-1. `supabase/01-schema.sql`
-2. `supabase/03-contributor-auth.sql`
-3. `supabase/04-editorial-permissions.sql`
-4. `supabase/migrations/20260921000300_editorial_member_management.sql`
-5. `supabase/02-seed.sql`, solo si se quiere el contenido de ejemplo
-6. Alta del primer `owner` en `editorial_members` con su `auth_user_id`
-
-- [ ] Confirmar el proyecto Supabase de producción. A re-verificar: el proyecto del 2026-09-15 no resuelve.
-- [ ] Ejecutar `supabase/01-schema.sql`. A re-verificar: el 2026-09-15 ya estaba aplicado.
-- [ ] Ejecutar `supabase/03-contributor-auth.sql`.
-- [ ] Ejecutar `supabase/04-editorial-permissions.sql`.
-- [ ] Ejecutar `supabase/migrations/20260921000300_editorial_member_management.sql`.
-- [ ] Ejecutar `supabase/02-seed.sql` solo si se quiere el seed. A re-verificar: el 2026-09-15 ya estaba aplicado.
-- [ ] Registrar colaboradores en `verified_contributors`. A re-verificar: el 2026-09-15 ya había colaboradores.
-- [ ] Confirmar el bucket `dwell-media`. A re-verificar: el 2026-09-15 ya existía.
-- [ ] Dar de alta el primer `owner` en `editorial_members` con su `auth_user_id`.
-- [ ] Invitar colaboradores mediante `/admin/review` y comprobar el vínculo Auth ↔ `verified_contributors`.
+1. Base nueva: `01-schema.sql`, `03-contributor-auth.sql`, `04-editorial-permissions.sql`, `20260921000300_editorial_member_management.sql`, y `02-seed.sql` solo si se quiere el ejemplo.
+2. Esquema anterior a `03` (la tabla `verified_contributors` existe y no tiene `auth_user_id`): `03-contributor-auth.sql` antes de `01-schema.sql`. El resto igual. El seed de producción ya estaba y se conservó.
+3. Alta del primer `owner`, después de que el usuario exista en Auth.
 
 ## Paso 3: repetir el E2E en producción
 
@@ -361,9 +363,8 @@ Controles que el código y el esquema ya aplican. La evidencia está en el repos
 - Lighthouse local (móvil y escritorio, `next start`) está en `docs/Tech/07-rendimiento.md`.
 - El E2E, cuando se configura, valida autenticación requerida, derechos obligatorios, colaborador desconocido, submission válida, persistencia y limpieza.
 - RLS no devuelve filas a la clave publishable para `editorial_members`, `moderation_events` ni `verified_contributors`.
-- Testing tiene aplicadas `20260921000100_contributor_auth.sql`, `20260921000200_editorial_permissions.sql` y `20260921000300_editorial_member_management.sql`.
-- Testing tiene un `owner` activo en `editorial_members`, distinto del colaborador E2E. Ese colaborador no se promueve a `owner`.
-- Producción no tiene aplicadas estas migraciones editoriales.
+- Testing tiene aplicadas `20260921000100`, `20260921000200`, `20260921000300` y `canonical_01_schema` (`20260925174404`). Hay dos `owner` activos, 3 usuarios Auth, 2 colaboradores vinculados, 2 submissions, 3 `moderation_events` y un post de comunidad en `review`. El recuento está en `docs/Tech/08-estado-supabase-2026-09-25.md`.
+- Producción tiene el mismo esquema desde el 2026-09-25 20:25–20:26 CEST, con otras versiones en el historial. Tiene el seed (3 properties y 4 posts) y cero colaboradores, cero miembros editoriales y cero usuarios Auth.
 - Falta la prueba de navegador del flujo completo de aprobación, publicación y rechazo.
 
 Para otra cuenta editorial, invítala desde el panel o inserta su UUID:

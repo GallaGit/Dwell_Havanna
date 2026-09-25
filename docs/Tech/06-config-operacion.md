@@ -55,24 +55,39 @@ scripts/apply-canonical-sql.sh            # lista el SQL; no conecta
 scripts/apply-canonical-sql.sh --with-seed
 ```
 
-`scripts/apply-canonical-sql.sh --apply` exige `DATABASE_URL` y `psql`. Si la URL contiene el ref de producción `sfujmwumtzuzwwhfmyxa`, el script se niega salvo `--allow-production`. No lo ejecutes contra producción desde un agente. El alta del primer `owner` queda fuera del script, con el `auth_user_id` real.
+`scripts/apply-canonical-sql.sh --apply` exige `DATABASE_URL` y `psql`. Si la URL contiene el ref de producción `sfujmwumtzuzwwhfmyxa`, el script se niega salvo `--allow-production`. No lo ejecutes contra producción desde un agente. Cada archivo va en una sola transacción (`psql --single-transaction` y `ON_ERROR_STOP`). Si una sentencia falla, ese archivo se revierte y el script no sigue con el siguiente. El alta del primer `owner` queda fuera del script, con el `auth_user_id` real.
 
-Verificación de esta preparación: `lint`, `test` (17 pasan, 1 E2E omitido) y `build`. El detalle de Lighthouse está en `docs/Tech/07-rendimiento.md`.
+Verificación de la preparación de código del PR #9: `lint`, `test` (17 pasan, 1 E2E omitido) y `build`. El detalle de Lighthouse está en `docs/Tech/07-rendimiento.md`. El estado de las bases al 2026-09-25 está en `docs/Tech/08-estado-supabase-2026-09-25.md`.
 
 ## Activación (lado humano)
 
-Hosting, dominio y variables están en `docs/PRODUCT/roadmap.md`, Paso 2. El orden SQL es el mismo que en ese paso y en `docs/Idea/Fase-1-Cierre.md` §6.
+Hosting, dominio y variables están en `docs/PRODUCT/roadmap.md`, Paso 2. Producción (`sfujmwumtzuzwwhfmyxa`, Dwell_Havanna_DB) ya tiene el SQL aplicado. No lo repitas.
 
-Orden SQL de un proyecto de producción, en el SQL Editor:
+### Orden SQL
 
-1. `supabase/01-schema.sql`
-2. `supabase/03-contributor-auth.sql`
-3. `supabase/04-editorial-permissions.sql`
-4. `supabase/migrations/20260921000300_editorial_member_management.sql`
-5. `supabase/02-seed.sql`, solo si se quiere el contenido de ejemplo
-6. Alta del primer `owner` en `editorial_members` con su `auth_user_id`
+Hay dos puntos de partida. El script usa el primero.
 
-El 2026-09-15 el proyecto `sfujmwumtzuzwwhfmyxa` ya tenía el esquema inicial, el seed, colaboradores y el bucket `dwell-media`. Ese proyecto ahora no resuelve. Esas piezas quedan a re-verificar.
+Base nueva, sin tablas:
+
+1. `supabase/01-schema.sql`. Crea `verified_contributors` ya con `auth_user_id`, así que el índice `verified_contributors_auth_user_idx` existe.
+2. `supabase/03-contributor-auth.sql`. La columna ya está; `add column if not exists` no cambia la tabla.
+3. `supabase/04-editorial-permissions.sql`.
+4. `supabase/migrations/20260921000300_editorial_member_management.sql`. Amplía el check de `moderation_events.action` a 6 acciones.
+5. `supabase/02-seed.sql`, solo si se quiere el contenido de ejemplo.
+6. Invitar al usuario en Auth y, después, dar de alta el primer `owner`.
+
+Esquema anterior a `03`: `verified_contributors` existe y no tiene `auth_user_id`. `01-schema.sql` hace `create table if not exists` y se salta la tabla. El `create index` de `verified_contributors_auth_user_idx` falla con `column "auth_user_id" does not exist`. En ese caso el orden es:
+
+1. `supabase/03-contributor-auth.sql`.
+2. `supabase/01-schema.sql`.
+3. `supabase/04-editorial-permissions.sql`.
+4. `supabase/migrations/20260921000300_editorial_member_management.sql`.
+5. El seed, solo si esas filas no están ya. En producción el seed del 2026-09-15 se conservó.
+6. El `owner`, después de crear el usuario en Auth.
+
+Producción se migró el 2026-09-25 20:25–20:26 CEST con este segundo orden, más el borrado de los 2 colaboradores de prueba y el `revoke` de `rls_auto_enable()`. Los archivos están en `supabase/prod-applied/2026-09-25/`. Hoy `auth_user_id` ya existe, así que el orden de una base nueva también es idempotente allí.
+
+`supabase db push` y `supabase db reset` no sirven para crear una base: `supabase/migrations/` no incluye `01-schema.sql` y no hay `supabase/config.toml`. Antes de un `db push` contra producción o testing hay que alinear el historial con `supabase migration repair`. Ese procedimiento está en `docs/Tech/08-estado-supabase-2026-09-25.md`. `repair` solo cambia la tabla de historial.
 
 Después del SQL:
 
@@ -81,7 +96,7 @@ Después del SQL:
 3. El colaborador abre el enlace recibido. No existe registro público. La plantilla del email tiene que incluir `token_hash` y `type`, como arriba.
 4. Probar: `/contribuir` → enviar → `/admin/review` → confirmar la aprobación → ver el post en `/journal` con `journal_posts.status='published'`.
 5. Fijar `NEXT_PUBLIC_SITE_URL` al dominio real antes de compartir. Site URL `https://<dominio>`. Allowlist `https://<dominio>/auth/callback`.
-6. En testing ya hay un `owner` activo, distinto del usuario E2E. En un proyecto nuevo, el paso 6 del orden SQL inserta esa cuenta. No promuevas el colaborador E2E.
+6. En testing hay dos `owner` activos. En un proyecto nuevo, el paso 6 del orden SQL inserta la primera cuenta, después de invitarla en Auth. No promuevas el colaborador E2E. En producción esa fila todavía no existe: la cuenta es la de Ociel.
 7. Validar `/iniciar-sesion?next=/admin/review`, una decisión de moderación y su fila en `moderation_events`.
 8. Validar: Meta Sharing Debugger (1 property + 1 journal) + `/feed.xml` + `/sitemap.xml` en producción.
 
@@ -104,13 +119,13 @@ Las lecturas públicas usan `getPublishedContentClient()` (`lib/db.ts`): `fetch`
 
 ## Variables en Vercel
 
-Cuando exista el proyecto, configura las mismas claves de `.env.example`. `SUPABASE_SERVICE_ROLE_KEY` y `ADMIN_TOKEN` son secretos de servidor. `NEXT_PUBLIC_*` se incrustan en el cliente en el build. `NEXT_PUBLIC_SITE_URL` es `https://dwellhavana.com` (o el host real, sin barra final).
+El proyecto ya está subido a Vercel. El despliegue y las variables no están verificados, y falta la URL. Cuando se confirmen, usa las mismas claves de `.env.example`. `SUPABASE_SERVICE_ROLE_KEY` y `ADMIN_TOKEN` son secretos de servidor. `NEXT_PUBLIC_*` se incrustan en el cliente en el build. `NEXT_PUBLIC_SITE_URL` es `https://dwellhavana.com` (o el host real, sin barra final).
 
 ## Seguridad mínima
 
 - `service_role` y `ADMIN_TOKEN` jamás salen del servidor (`lib/db.ts` y admin son server-only). La publishable key sí puede llegar al navegador.
 - `POST /api/submissions` exige una sesión Supabase Auth y comprueba que el usuario esté vinculado al handle enviado mediante `verified_contributors.auth_user_id`.
-- La columna y el índice de vínculo se crean con `supabase/03-contributor-auth.sql` si el proyecto ya ejecutó el esquema inicial.
+- La columna y el índice de vínculo están en `supabase/01-schema.sql` y, para una tabla vieja, en `supabase/03-contributor-auth.sql`. En el esquema anterior a `03`, ese archivo va antes de `01-schema.sql`. Producción se migró así el 2026-09-25. El índice `verified_contributors_auth_user_idx` repite el que ya crea el `UNIQUE`; es deuda conocida, documentada en `docs/Tech/08-estado-supabase-2026-09-25.md`.
 - El E2E HTTP se activa solo con variables `E2E_*` de un proyecto de testing dedicado; `E2E_AUTH_COOKIE` representa la sesión de un colaborador invitado y nunca debe apuntar a producción.
 - RLS sin policies + bucket escritura solo `service_role` (ver `04`).
 - Solo JPEG ≤8MB, `rights_granted` obligatorio, allowlist estricta, limpieza de huérfanos en API.

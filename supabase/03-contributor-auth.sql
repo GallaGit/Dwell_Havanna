@@ -1,5 +1,7 @@
 -- Dwell Havana — colaboradores invitados
--- Ejecutar después de 01-schema.sql en el mismo proyecto Supabase.
+-- En una base nueva, ejecutar después de 01-schema.sql: la tabla tiene que existir.
+-- Si verified_contributors ya existe sin auth_user_id, ejecutar este archivo
+-- antes de 01-schema.sql. El índice de 01-schema.sql referencia esa columna.
 alter table verified_contributors
   add column if not exists auth_user_id uuid unique;
 
