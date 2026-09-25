@@ -1,6 +1,6 @@
 # Dwell Havana roadmap
 
-Estado actualizado: 2026-09-24
+Estado actualizado: 2026-09-25
 
 Este documento reúne el trabajo hecho, los pasos de activación y las fases siguientes. Las casillas marcadas reflejan el estado documentado en `docs/Idea/Fase-1-Cierre.md` y en `docs/Tech/`.
 
@@ -74,13 +74,13 @@ Este documento reúne el trabajo hecho, los pasos de activación y las fases sig
 
 - [x] Ejecutar `npm run lint` con resultado correcto.
 - [x] Ejecutar `npm run build` con resultado correcto.
-- [x] Verificar 19 rutas generadas en la build documentada.
+- [x] Verificar las rutas de la build de Fase 1. La build del 2026-09-25 lista 19 paths (ver Estado de validación). La cifra 21 no corresponde a rutas extra.
 - [x] Resolver el bloqueo histórico `403 unknown_contributor` con un servidor de desarrollo fresco.
 - [x] Documentar el problema local de certificados TLS sin incorporarlo al código ni a la configuración de producción.
 
 ## Paso 1: cerrar la optimización local
 
-Cambios actualmente presentes en el árbol de trabajo:
+Las optimizaciones de imagen ya están en `main` desde el PR #2 (`c100222`, `perf: optimize editorial images and add product roadmap`). No son cambios sin commitear.
 
 - [x] Añadir formatos AVIF y WebP en `next.config.ts`.
 - [x] Añadir `minimumCacheTTL` para imágenes optimizadas.
@@ -89,7 +89,6 @@ Cambios actualmente presentes en el árbol de trabajo:
 - [x] Ejecutar `npm run lint`.
 - [x] Ejecutar `npm run build`.
 - [ ] Revisar visualmente home, property detail y journal detail en móvil y escritorio.
-- [x] Mantener estos cambios separados de las tareas de producción hasta verificar que no degradan la calidad editorial.
 
 ## Iteración: tests automatizados
 
@@ -168,9 +167,9 @@ Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. En testing ya hay 
 
 7. **Añadir pruebas y retirar el fallback**
    - [x] Cubrir `owner`, `moderator`, miembro inactivo y el fallback temporal en `tests/editorial-permissions.test.mjs`.
-   - Probar en navegador la revocación de una cuenta que ya tenía sesión.
-   - Probar en navegador la auditoría de aprobaciones y rechazos.
-   - Retirar `ADMIN_TOKEN` cuando el acceso `owner` individual esté verificado en producción.
+   - [ ] Probar en navegador la revocación de una cuenta que ya tenía sesión.
+   - [ ] Probar en navegador la auditoría de aprobaciones y rechazos.
+   - [ ] Retirar `ADMIN_TOKEN` cuando el acceso `owner` individual esté verificado en producción.
 
 ### Correcciones y retiro solicitados por contribuidores
 
@@ -196,25 +195,49 @@ Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. En testing ya hay 
 
 ## Paso 2: activar Supabase y producción
 
-Requiere credenciales y acciones fuera del repositorio.
+Requiere credenciales y acciones fuera del repositorio. No hay hosting configurado.
 
-Este paso activa producción. Las migraciones editoriales ya están en el repositorio y en testing. En producción se aplican después de validar el flujo, y antes de retirar `ADMIN_TOKEN`.
+Este paso activa producción. Las migraciones editoriales ya están en el repositorio y en testing. En producción se aplican con el orden SQL de abajo, antes de retirar `ADMIN_TOKEN`.
 
-- [ ] Confirmar el proyecto Supabase de producción.
-- [ ] Configurar `NEXT_PUBLIC_SITE_URL` con el dominio real y permitir esa URL en la allowlist de redirecciones de Supabase Auth. Sin eso, los emails de invitación usan `localhost` y solo se abren en la máquina que ejecuta la app. La confirmación remota queda diferida hasta esta URL.
+El 2026-09-15 el proyecto de producción (`sfujmwumtzuzwwhfmyxa`, `docs/Idea/Fase-1-Cierre.md` §8) ya tenía `supabase/01-schema.sql`, `supabase/02-seed.sql`, colaboradores en `verified_contributors` y el bucket `dwell-media`. Ese proyecto ahora no resuelve (probable pausa o borrado). Esas cuatro piezas quedan **a re-verificar**, no como hechas.
+
+### Hosting, dominio y variables
+
+- [ ] Elegir hosting. Vercel es el recomendado.
+- [ ] Renovar el dominio `dwellhavana.com` antes del 2026-10-06.
+- [ ] Apuntar el DNS del apex y de `www` al hosting.
+- [ ] En Supabase Auth, fijar la Site URL `https://<dominio>` y la allowlist de redirecciones `https://<dominio>/auth/callback`. Si el sitio también responde en `www`, permitir ese host.
+- [ ] Configurar `NEXT_PUBLIC_SITE_URL` con el dominio real. Sin esa variable, las invitaciones usan `http://localhost:3000` y solo se abren en la máquina que ejecuta la app.
 - [ ] Configurar `NEXT_PUBLIC_SUPABASE_URL`.
 - [ ] Configurar `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 - [ ] Configurar `SUPABASE_SERVICE_ROLE_KEY` solo en el servidor.
 - [ ] Generar un `ADMIN_TOKEN` largo y privado.
-- [ ] Ejecutar `supabase/01-schema.sql` en Supabase SQL Editor.
-- [ ] Ejecutar `supabase/02-seed.sql` en Supabase SQL Editor.
-- [ ] Registrar colaboradores en `verified_contributors`.
-- [ ] Invitar colaboradores mediante `/admin/review` y comprobar el vínculo Auth ↔ `verified_contributors`.
-- [ ] Confirmar que el bucket `dwell-media` está configurado.
 - [ ] Desplegar la aplicación.
 - [ ] Confirmar que ninguna variable secreta se expone al navegador.
 
-En producción, después de `03-contributor-auth.sql`, aplican `supabase/04-editorial-permissions.sql` y `supabase/migrations/20260921000300_editorial_member_management.sql`. El primer usuario editorial se vincula como `owner` con su `auth_user_id`. Estas casillas siguen sin marcar: producción no se ha migrado.
+La plantilla de los emails de invitación y de magic link está en `docs/Tech/06-config-operacion.md`.
+
+### Orden SQL canónico
+
+Aplicar en el SQL Editor, en este orden. Los nombres son los archivos del repositorio. El mismo orden está en `docs/Tech/06-config-operacion.md` y en `docs/Idea/Fase-1-Cierre.md` §6.
+
+1. `supabase/01-schema.sql`
+2. `supabase/03-contributor-auth.sql`
+3. `supabase/04-editorial-permissions.sql`
+4. `supabase/migrations/20260921000300_editorial_member_management.sql`
+5. `supabase/02-seed.sql`, solo si se quiere el contenido de ejemplo
+6. Alta del primer `owner` en `editorial_members` con su `auth_user_id`
+
+- [ ] Confirmar el proyecto Supabase de producción. A re-verificar: el proyecto del 2026-09-15 no resuelve.
+- [ ] Ejecutar `supabase/01-schema.sql`. A re-verificar: el 2026-09-15 ya estaba aplicado.
+- [ ] Ejecutar `supabase/03-contributor-auth.sql`.
+- [ ] Ejecutar `supabase/04-editorial-permissions.sql`.
+- [ ] Ejecutar `supabase/migrations/20260921000300_editorial_member_management.sql`.
+- [ ] Ejecutar `supabase/02-seed.sql` solo si se quiere el seed. A re-verificar: el 2026-09-15 ya estaba aplicado.
+- [ ] Registrar colaboradores en `verified_contributors`. A re-verificar: el 2026-09-15 ya había colaboradores.
+- [ ] Confirmar el bucket `dwell-media`. A re-verificar: el 2026-09-15 ya existía.
+- [ ] Dar de alta el primer `owner` en `editorial_members` con su `auth_user_id`.
+- [ ] Invitar colaboradores mediante `/admin/review` y comprobar el vínculo Auth ↔ `verified_contributors`.
 
 ## Paso 3: repetir el E2E en producción
 
@@ -299,22 +322,24 @@ Acciones de la dueña de las cuentas, antes de implementar la API.
 - [ ] Crear polling como fallback si los webhooks fallan.
 - [ ] Mantener la revisión humana antes de cualquier publicación.
 
-## Riesgos y controles
+## Controles vigentes
 
-- [ ] No exponer `SUPABASE_SERVICE_ROLE_KEY`.
-- [ ] No exponer `ADMIN_TOKEN`.
-- [ ] No permitir publicación automática sin moderación.
-- [ ] Mantener RLS activo.
-- [ ] Mantener validación de derechos de imagen.
-- [ ] Mantener allowlist de colaboradores.
-- [ ] Evitar URLs firmadas que Meta no pueda leer durante la publicación.
-- [ ] Mantener la web como URL canónica para evitar duplicación SEO.
+Controles que el código y el esquema ya aplican. La evidencia está en el repositorio. Lo que sigue abierto queda sin marcar.
+
+- [x] RLS activo. `supabase/01-schema.sql` activa RLS en `properties`, `journal_posts`, `verified_contributors`, `submissions` y `syndications`. `supabase/04-editorial-permissions.sql` lo activa en `editorial_members` y `moderation_events`. En la prueba del 2026-09-15 (`docs/Idea/Fase-1-Cierre.md` §8) la key pública recibió `[]` en contributors y properties. En testing, la clave publishable no lee `editorial_members`, `moderation_events` ni `verified_contributors`.
+- [x] Validación de derechos de imagen. `POST /api/submissions` exige `rights` y guarda `rights_granted`. `tests/submissions-validation.test.mjs` cubre el rechazo `rights_required`.
+- [x] Lista de colaboradores verificados. El envío exige sesión y un `verified_contributors.auth_user_id` vinculado al handle. Un handle ajeno o desconocido responde `403 unknown_contributor` (`docs/Idea/Fase-1-Cierre.md` §2).
+- [x] `SUPABASE_SERVICE_ROLE_KEY` no llega al navegador. Solo la leen módulos de servidor (`lib/db.ts`). No usa el prefijo `NEXT_PUBLIC_`.
+- [x] `ADMIN_TOKEN` no llega al navegador. La cookie `dh_admin` es httpOnly y el secreto se compara en el servidor (`lib/editorial-auth.ts`). Sigue como fallback temporal.
+- [x] No hay publicación automática. Aprobar en `/admin/review` pide confirmación y solo entonces inserta `journal_posts` con `status='published'`.
+- [x] La web es la URL canónica. `lib/site.ts` expone `siteUrl` y `canonicalFor`.
+- [ ] Evitar URLs firmadas que Meta no pueda leer cuando exista la publicación en redes (Paso 7).
 
 ## Estado de validación local y de testing
 
-- `npm run lint` pasa en la revisión del 2026-09-24.
-- `npm test` pasa con 9 pruebas y omite 1 E2E HTTP porque no hay variables `E2E_*`.
-- La build registrada antes de esta revisión generaba 21 rutas. Esta revisión no volvió a ejecutar `npm run build`.
+- `npm run lint`, `npm test` y `npm run build` pasan en la revisión del 2026-09-25. La build no necesita secretos de Supabase.
+- `npm test` pasa 13 pruebas y omite 1 E2E HTTP porque no hay variables `E2E_*`.
+- `npm run build` (Next.js 16.3.5) lista 19 paths de la app. No cuenta `/_not-found` ni las etiquetas de grupo `/journal/[slug]` y `/properties/[slug]`. Esas dos etiquetas, sumadas a los 19 paths, son las 21 líneas que una nota anterior llamó «21 rutas» sin volver a ejecutar la build. El 19 de Fase 1 era otra tabla: 17 paths de entonces más esas dos etiquetas, antes de `/iniciar-sesion` y `/auth/callback`. La lista vigente está en `docs/Tech/03-frontend-rutas-render.md`.
 - El E2E, cuando se configura, valida autenticación requerida, derechos obligatorios, colaborador desconocido, submission válida, persistencia y limpieza.
 - RLS no devuelve filas a la clave publishable para `editorial_members`, `moderation_events` ni `verified_contributors`.
 - Testing tiene aplicadas `20260921000100_contributor_auth.sql`, `20260921000200_editorial_permissions.sql` y `20260921000300_editorial_member_management.sql`.

@@ -6,6 +6,8 @@ Los flujos editoriales y las decisiones de permisos están en `docs/PRODUCT/05-f
 
 ## Tabla de rutas
 
+`npm run build` (Next.js 16.3.5, 2026-09-25) lista 19 paths. Cada slug SSG cuenta. No cuentan `/_not-found` ni las etiquetas de grupo `/journal/[slug]` y `/properties/[slug]`. Esas dos etiquetas son el desfase con la cifra 21.
+
 | Ruta | Archivo | Tipo / render |
 |---|---|---|
 | `/` | `app/page.tsx` | Server Component, `revalidate 3600` |
@@ -15,8 +17,8 @@ Los flujos editoriales y las decisiones de permisos están en `docs/PRODUCT/05-f
 | `/journal` | `app/journal/page.tsx` | Server, lista desde `listPublishedPosts()` |
 | `/journal/[slug]` ×4 | `app/journal/[slug]/page.tsx` | SSG+ISR + OG propio |
 | `/contribuir` | `app/contribuir/page.tsx` | `"use client"`: formulario + `fetch POST /api/submissions` |
-| `/iniciar-sesion` | `app/iniciar-sesion/page.tsx` | `"use client"`: enlace para emails ya invitados. Respeta `next` si empieza por `/` |
-| `/auth/callback` | `app/auth/callback/route.ts` | Cambia el código Auth por sesión y redirige |
+| `/iniciar-sesion` | `app/iniciar-sesion/page.tsx` | `"use client"`: enlace para emails ya invitados. `next` pasa por `lib/safe-redirect.ts` |
+| `/auth/callback` | `app/auth/callback/route.ts` | `code` (PKCE) o `token_hash` + `type` (`verifyOtp`). Redirige solo a un path del mismo origen |
 | `/admin/review` | `app/admin/review/page.tsx` + `ModerationDecision.tsx` | Server Actions. La confirmación de aprobar o rechazar es cliente |
 | `/api/submissions` | `app/api/submissions/route.ts` | `POST` dinámico, `runtime nodejs` |
 | `/feed.xml` | `app/feed.xml/route.ts` | `GET` RSS, `revalidate 3600` |

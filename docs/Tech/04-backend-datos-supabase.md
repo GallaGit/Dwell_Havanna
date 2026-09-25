@@ -19,7 +19,7 @@ Toda lectura pública pasa por `lib/content.ts`. Si hay Supabase configurado lee
 
 ## Schema (`supabase/01-schema.sql`)
 
-Aplicar en SQL Editor: `01` luego `02`.
+El orden en el SQL Editor es el de `docs/PRODUCT/roadmap.md` (Paso 2) y `docs/Tech/06-config-operacion.md`: `supabase/01-schema.sql`, `supabase/03-contributor-auth.sql`, `supabase/04-editorial-permissions.sql`, `supabase/migrations/20260921000300_editorial_member_management.sql`, `supabase/02-seed.sql` solo si se quiere el ejemplo, y el alta del primer `owner` en `editorial_members`.
 
 | Tabla | Clave | Campos relevantes |
 |---|---|---|

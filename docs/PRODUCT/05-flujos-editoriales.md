@@ -24,7 +24,7 @@ Fuente: `app/contribuir/page.tsx`, `app/api/submissions/route.ts`, `app/admin/re
 7. Invitar (`inviteContributor`) requiere `owner` o el fallback temporal. Un `moderator` no invita. El usuario elige un handle existente y un email. `auth.admin.inviteUserByEmail` crea la cuenta invitada y guarda `auth_user_id`.
 8. Estados vacíos: sin acceso → login editorial y, si existe, formulario de token temporal; sin DB → "Sin base de datos".
 
-`inviteContributor` e `inviteEditorialMember` pasan `redirectTo` con `NEXT_PUBLIC_SITE_URL` y `/auth/callback`. Si la variable no está definida, el servidor usa `http://localhost:3000`. Supabase Auth solo completa el enlace si esa URL está en la allowlist de redirecciones. `localhost` abre el enlace en la máquina que ejecuta la app. La confirmación remota queda diferida hasta la URL pública de producción.
+`inviteContributor` e `inviteEditorialMember` pasan `redirectTo` con `NEXT_PUBLIC_SITE_URL` y `/auth/callback`. Si la variable no está definida, el servidor usa `http://localhost:3000`. Supabase Auth solo completa el enlace si esa URL está en la allowlist de redirecciones. `localhost` abre el enlace en la máquina que ejecuta la app. La confirmación remota queda diferida hasta la URL pública de producción. La plantilla del email tiene que enviar `token_hash` y `type` al callback. El detalle está en `docs/Tech/06-config-operacion.md`.
 
 Los `owner` pueden gestionar el equipo editorial desde el mismo panel: invitar
 cuentas `owner` o `moderator`, cambiar roles y activar o desactivar miembros.

@@ -8,7 +8,7 @@
 | Carpeta | Contenido | Estado |
 |---|---|---|
 | `Dwell-Havana_Design-Direction/Design-Direction.md` | Dirección editorial/visual (revista, no portal) | Existente, no tocado |
-| `Idea/Fase-1-Cierre.md` | Cierre Fase 1 verificada (lint+build, 19 rutas) | Existente, no tocado |
+| `Idea/Fase-1-Cierre.md` | Cierre Fase 1 verificada (lint+build). El conteo de rutas vigente está en `03-frontend-rutas-render.md` | Existente, actualizado en el conteo |
 | `Idea/Plan-Crossposting.md` | Plan híbrido ingesta/sindicación Fases 1-3 | Existente, no tocado |
 | `Idea/Talking-to-client.md` | Nota idea crossposting | Existente, no tocado |
 | `Tech/` (esta carpeta) | Stack + estructura real de la app en la raíz | **Nuevo** |

@@ -1,82 +1,33 @@
-# Handoff - 21 September 2026
+# Handoff — 25 de septiembre de 2026
 
-## Current branch
+## Rama
 
-`cursor/editorial-permissions-onto-main-f82b`
+`main`, antes de este PR, está en `62d4225` (`merge: editorial permissions model`), después del PR #7 y de tres commits de docs (`aa1992c`, `a96ebc9`, `62d4225`). No había rama de feature activa. El PR #7 (permisos editoriales) ya está en `main`.
 
-This branch merges `origin/main` (`68bf651`) into the editorial permissions work
-and opens one pull request against `main`. Do not force-push `main`.
+## Siguiente
 
-## Supabase projects
+Paso 2 de `docs/PRODUCT/roadmap.md`: activar producción. Es trabajo de la dueña, fuera del repositorio. No hay hosting configurado.
 
-- Testing: `Dwell_Havanna_Testing` (`ypeizxnafipvojpntsaw`)
-- Production: `Dwell_Havanna_DB` (`sfujmwumtzuzwwhfmyxa`)
+Bloqueos de ese paso:
 
-## Database status
+- El proyecto Supabase de producción (`Dwell_Havanna_DB`, `sfujmwumtzuzwwhfmyxa`) no resuelve. El 2026-09-15 tenía esquema, seed, colaboradores y el bucket `dwell-media` (`docs/Idea/Fase-1-Cierre.md` §8). Probable pausa o borrado. Hay que restaurarlo y re-verificar esas piezas. No aplicar SQL ni migraciones hasta entonces.
+- El dominio `dwellhavana.com` hay que renovarlo antes del 2026-10-06. Falta el DNS del apex y de `www`.
+- Falta elegir hosting (Vercel recomendado), las variables de entorno y la Site URL más la allowlist `https://<dominio>/auth/callback`.
 
-Testing has the base schema and seed data, plus these migrations applied:
+## Qué quedó en código
 
-- `20260921000100_contributor_auth.sql`
-- `20260921000200_editorial_permissions.sql`
-- `20260921000300_editorial_member_management.sql`
+- `lib/safe-redirect.ts` solo acepta un path relativo del mismo origen. Lo usan `/auth/callback` y `/iniciar-sesion`.
+- `/auth/callback` sigue aceptando `?code=` (PKCE). También acepta `token_hash` + `type` vía `verifyOtp`. La plantilla de email está en `docs/Tech/06-config-operacion.md`.
+- CI ejecuta `npm run lint`, `npm test` y `npm run build`. El build no necesita secretos.
+- Aprobar en `/admin/review`, tras confirmación, inserta `journal_posts.status='published'`.
+- `ADMIN_TOKEN` sigue como fallback temporal.
 
-Verified in testing:
-
-- `verified_contributors.auth_user_id` exists.
-- `editorial_members` exists.
-- `moderation_events` exists.
-- The testing account `ociel.galla@gmail.com` is linked to `@ociel.galla` and has the active `owner` role.
-- The E2E contributor remains a separate account and must not be promoted to `owner`.
-
-Production has the base tables, but it was missing
-`verified_contributors.auth_user_id`, `editorial_members`, and
-`moderation_events` when last checked. Do not apply the production migrations
-until the testing flow has been validated.
-
-## Code changes
-
-- `lib/editorial-auth.ts` centralizes server-side editorial authorization.
-- `app/admin/review/page.tsx` supports `owner` and `moderator` access, owner-only invitations, and moderation audit events.
-- `app/iniciar-sesion/page.tsx` preserves a safe `next` path for editorial login.
-- `/properties` now has a functional city filter; free-text matching remains a future product decision.
-- Mobile navigation uses a circular floating icon button and a horizontal pill bar that expands toward the left in 0.8s. The button uses inline `Menu` and `X` SVG icons and stays 24px from the viewport edges, with `safe-area-inset` support. The open panel keeps a 24px left margin and a 16px gap before the button, and scrolls internally on narrow screens. Its side and bottom offsets are CSS variables in `app/layout.tsx`.
-- Contact CTAs use `mailto:hola@dwellhavana.example`.
-- `/admin/review` is not protected by URL obscurity: the route is reachable, but the queue and actions require editorial Auth or the temporary token. The token cookie expires after seven days by default and is configurable with `ADMIN_TOKEN_TTL_SECONDS`.
-- `supabase/migrations/` contains the formal `03` and `04` migrations.
-- `supabase/migrations/20260921000300_editorial_member_management.sql` extends audit actions for owner-managed editorial members.
-- `20260921000300_editorial_member_management.sql` is applied in `Dwell_Havanna_Testing`; production has not been modified.
-- `supabase/03-contributor-auth.sql` and `supabase/04-editorial-permissions.sql` remain readable SQL references.
-- The E2E runner uses the Node executable to start Next on Windows.
-- Supabase CLI `2.117.0` is a pinned dev dependency.
-- `/admin/review` now asks for confirmation before approving or rejecting a submission.
-- Approval creates `journal_posts.status='published'` and revalidates `/`, `/journal`, and the approved journal detail route.
-- Approved community posts therefore appear in the public Journal after the editorial decision.
-- `app/admin/review/ModerationDecision.tsx` contains the client-side confirmation dialog; authorization and mutations remain server-side.
-
-## Next session
-
-1. Run a manual browser check of `/admin/review` with the testing owner account.
-2. Submit a test contribution, confirm the approval dialog, and verify the post at `/journal`.
-3. Confirm rejection removes the submission from the pending queue and creates its audit event.
-4. Add a moderator test user and verify that the moderator cannot manage editorial members.
-5. Review the mobile navigation in a real mobile viewport.
-6. Apply the migrations to production only after the testing flow passes.
-
-## Verification already completed
+## Verificación de esta sesión
 
 - `npm run lint`
-- `npm run build`
-- `npm test`: 9 passing tests and 1 skipped opt-in HTTP E2E test because its `E2E_*` variables are not configured in this session.
-- `npm run test:editorial-auth` runs the role policy tests without starting Next.js or reusing development-server state. It covers owner, moderator, inactive/malformed members, null access, and the temporary legacy fallback.
-- Editorial member management is owner-only: owners can invite, change roles, and activate/deactivate other members; moderators and the legacy token cannot manage permissions. The server rejects self-management and removing the final active owner.
-- Contributor corrections and withdrawal requests are documented as a future phase only. The current app does not let contributors edit, withdraw, or delete submissions.
-- `node --env-file=.env.local --test tests/submissions-http.e2e.test.mjs`: 1 passing authenticated HTTP E2E test.
-- Testing REST checks for the new column and tables: successful.
-- Testing has a separate active owner account linked to `@ociel.galla`; the E2E contributor remains separate.
-- After a successful Auth callback, `/auth/callback` adds `welcome=1`. `/admin/review` renders that welcome status. Other destinations receive the query parameter and do not render a welcome message yet.
-- The owner account reached `/admin/review` and displayed the editorial queue, invitation form, and member-management controls.
-- Complete browser assertions for moderator and inactive-account transitions remain pending because the current dev-server harness reused stale page or session state during role transitions.
-- Direct Supabase checks confirmed that `owner -> moderator -> inactive` updates work and cleanup completed for the temporary role-transition test.
+- `npm test`: 13 pruebas pasan y 1 E2E HTTP se omite porque no hay variables `E2E_*`
+- `npm run build`: 19 paths de la app
 
-Never commit `.env.local`, Supabase access tokens, database passwords, service
-keys, or E2E cookies.
+No se tocó ningún proyecto Supabase, no se ejecutaron migraciones y no se desplegó.
+
+No commitear `.env.local`, tokens de Supabase, contraseñas, service keys ni cookies de E2E.
