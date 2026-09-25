@@ -1,6 +1,6 @@
 # Fase 1 — Cierre (2026-09-15)
 
-Estado: **implementada y verificada en local** (`lint` + `build` verdes). La build de este cierre se anotó como 19 rutas. Esa cifra no es el inventario de hoy: no incluía `/iniciar-sesion` ni `/auth/callback`. La build del 2026-09-25 lista 19 paths distintos. La lista está en `docs/Tech/03-frontend-rutas-render.md`.
+Estado: **implementada y verificada en local** (`lint` + `build` verdes). La build de este cierre se anotó como 19 rutas. Esa cifra no es el inventario de hoy: no incluía `/iniciar-sesion` ni `/auth/callback`. La lista vigente está en `docs/Tech/03-frontend-rutas-render.md`. La cifra 19 es de una build anterior a iconos, `robots.txt`, manifiesto y los slugs de `/embed`.
 Commits en `GallaGit/Dwell_Havanna` rama `main`:
 - `9c7d391` fundación (schema, seed, capa de contenido con fallback)
 - `a6fdcbb` cierre (este documento describe ese commit)
@@ -51,7 +51,7 @@ Si el insert falla tras subir, borra el archivo huérfano (best-effort).
 `NEXT_PUBLIC_SITE_URL` · `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` · `SUPABASE_SERVICE_ROLE_KEY` · `ADMIN_TOKEN`. Copiar a `.env.local` (gitignoreado). Solo `NEXT_PUBLIC_*` llega al navegador; `service_role` y `ADMIN_TOKEN` jamás salen del servidor.
 
 ## 5. Verificación hecha
-`npm run lint` ✓ · `npm run build` ✓ en este cierre. El conteo de entonces (anotado como 19 rutas: 7 properties/journal por slug, sitemap, feed, contribuir, admin, api submissions y embed, más índices) es el de esa build, anterior a `/iniciar-sesion` y `/auth/callback`. La build del 2026-09-25 lista 19 paths: esos dos entran y no se vuelven a contar las etiquetas `[slug]`. Rutas con DB ausente responden con fallback o mensajes, sin romper el build.
+`npm run lint` ✓ · `npm run build` ✓ en este cierre. El conteo de entonces (anotado como 19 rutas: 7 properties/journal por slug, sitemap, feed, contribuir, admin, api submissions y embed, más índices) es el de esa build, anterior a `/iniciar-sesion` y `/auth/callback`. La tabla posterior está en `docs/Tech/03-frontend-rutas-render.md`. Rutas con DB ausente responden con fallback o mensajes, sin romper el build.
 
 ## 6. Qué falta para activar (lado humano)
 

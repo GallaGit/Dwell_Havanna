@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { cookies } from "next/headers";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { PUBLISHED_CONTENT_TAG } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { getServiceClient } from "@/lib/db";
 import { ModerationDecision } from "./ModerationDecision";
@@ -129,9 +130,12 @@ async function decide(formData: FormData): Promise<void> {
   }
   revalidatePath("/admin/review");
   if (action === "approve") {
+    updateTag(PUBLISHED_CONTENT_TAG);
     revalidatePath("/");
     revalidatePath("/journal");
     revalidatePath(`/journal/community-${id.slice(0, 8)}`);
+    revalidatePath("/feed.xml");
+    revalidatePath("/sitemap.xml");
   }
 }
 
@@ -315,11 +319,14 @@ export default async function AdminReviewPage({
           </a>
           {process.env.ADMIN_TOKEN && (
             <form action={login} className="flex flex-col gap-4 border-t rule pt-6">
+              <label htmlFor="emergency-token" className="meta-label">Token de emergencia</label>
               <input
+                id="emergency-token"
                 name="token"
                 type="password"
                 required
-                 placeholder="Emergency token"
+                autoComplete="current-password"
+                placeholder="Emergency token"
                 className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink"
               />
               <button
@@ -404,16 +411,22 @@ export default async function AdminReviewPage({
              El handle debe existir previamente en la lista de colaboradores. No hay registro público.
            </p>
            <form action={inviteContributor} className="flex flex-col gap-3">
+             <label htmlFor="contributor-handle" className="meta-label">Handle</label>
              <input
+               id="contributor-handle"
                name="handle"
                required
+               autoComplete="off"
                placeholder="@arq.habana"
                className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink"
              />
+             <label htmlFor="contributor-email" className="meta-label">Email</label>
              <input
+               id="contributor-email"
                name="email"
                required
                type="email"
+               autoComplete="email"
                placeholder="email del colaborador"
                className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink"
              />
@@ -431,12 +444,21 @@ export default async function AdminReviewPage({
             Solo las cuentas owner pueden invitar, cambiar roles o desactivar acceso. Siempre debe quedar un owner activo.
           </p>
           <form action={inviteEditorialMember} className="grid gap-3 md:grid-cols-4">
-            <input name="display_name" placeholder="Nombre" className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink" />
-            <input name="email" required type="email" placeholder="email editorial" className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink" />
-            <select name="role" defaultValue="moderator" className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="member-name" className="meta-label">Nombre</label>
+              <input id="member-name" name="display_name" autoComplete="name" placeholder="Nombre" className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="member-email" className="meta-label">Email</label>
+              <input id="member-email" name="email" required type="email" autoComplete="email" placeholder="email editorial" className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="member-role" className="meta-label">Rol</label>
+              <select id="member-role" name="role" defaultValue="moderator" className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink">
               <option value="moderator">Moderator</option>
               <option value="owner">Owner</option>
             </select>
+            </div>
             <button type="submit" className="text-sm bg-ink text-paper px-6 py-2.5 hover:opacity-80 transition">Invitar al equipo</button>
           </form>
           <div className="mt-6 flex flex-col gap-3">

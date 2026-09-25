@@ -7,6 +7,7 @@ Esta carpeta contiene las decisiones de producto, los flujos editoriales y las g
 1. `roadmap.md` — visión, fases, trabajo pendiente y orden de implementación.
 2. `05-flujos-editoriales.md` — ingesta, moderación, acceso editorial y sindicación pull.
 3. `07-guia-acceso-colaboradores.md` — uso del acceso por invitación para editoras y colaboradores.
+4. `contenido-placeholder.md` — dónde está el contenido de ejemplo y cómo sustituirlo.
 
 ## Convención
 

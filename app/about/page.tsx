@@ -1,4 +1,11 @@
-export const metadata = { title: "About — Dwell Havana" };
+import { contactEmail, contactMailto } from "@/lib/placeholders";
+import { pageMetadata } from "@/lib/page-metadata";
+
+export const metadata = pageMetadata({
+  title: "About",
+  description: "Dwell Havana is an editorial guide to the city's architecture, design and distinctive homes.",
+  path: "/about",
+});
 
 export default function AboutPage() {
   return (
@@ -52,8 +59,8 @@ export default function AboutPage() {
 
       <div id="contact" className="mt-16 border rule p-8 md:p-12">
         <p className="meta-label mb-3">Contact</p>
-        <a href="mailto:hola@dwellhavana.example" className="block max-w-full break-all font-display text-3xl md:text-4xl underline decoration-line underline-offset-4 hover:opacity-70">
-          hola@dwellhavana.example
+        <a href={contactMailto()} className="block max-w-full break-all font-display text-3xl md:text-4xl underline decoration-line underline-offset-4 hover:opacity-70">
+          {contactEmail}
         </a>
         <p className="mt-3 text-sm leading-7 text-charcoal/80 max-w-lg">
           For visits, dossiers, editorial submissions or collaborations.

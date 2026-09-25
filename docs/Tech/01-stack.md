@@ -19,10 +19,11 @@ Las decisiones de producto y el roadmap están en `docs/PRODUCT/roadmap.md`.
 ## Rendering / imágenes / fuentes
 
 - `next/image` con `remotePatterns` en `next.config.ts`: `images.unsplash.com`, `picsum.photos`, `*.supabase.co` (bucket `dwell-media`, Fase 1).
-- `next/font/google` en `app/layout.tsx`: `Fraunces` (`--font-display`) + `Inter` (`--font-body`), `display: swap`.
-- ISR con `export const revalidate = 3600` en home, slugs, sitemap, feed y embed.
-- `generateStaticParams()` en `app/properties/[slug]/page.tsx` y `app/journal/[slug]/page.tsx` lee slugs publicados desde la capa de contenido.
-- `generateMetadata()` por slug: `title`, `description`, `alternates.canonical`, OpenGraph `article` + Twitter `summary_large_image`.
+- `next/font/google` en `app/layout.tsx`: Fraunces (normal e itálica, variable `--font-fraunces`) e Inter (`--font-inter`), `display: swap`. `@theme` apunta `--font-display` y `--font-body` a esas variables, con Georgia y `system-ui` como reserva.
+- `next/image`: `qualities: [70]` en `next.config.ts`, porque Next 16 solo admite 75 si no se declara la lista. La imagen LCP usa `preload`.
+- ISR con `export const revalidate = 3600` en home, slugs, sitemap, feed y embed. El embed también exporta `generateStaticParams()`.
+- `generateStaticParams()` en properties, journal y embed lee slugs publicados desde la capa de contenido.
+- Metadata global en `app/layout.tsx`: `metadataBase`, plantilla de título `%s — Dwell Havana`, Open Graph y Twitter por defecto. Cada página pública repite su canonical y su imagen con `lib/page-metadata.ts`, porque un `openGraph` hijo sustituye el objeto entero.
 
 ## Estilo editorial (tokens)
 
@@ -34,11 +35,11 @@ Definidos en `app/globals.css` bajo `@theme`:
 | `--color-cream` | `#f3eee6` |
 | `--color-ink` | `#161412` |
 | `--color-charcoal` | `#2e2b27` |
-| `--color-muted` | `#837b6f` |
+| `--color-muted` | `#6f685e` |
 | `--color-line` | `#e3dccf` |
 | `--color-clay` | `#87573a` |
-| `--font-display` | `Fraunces, Georgia, serif` |
-| `--font-body` | `Inter, system-ui, sans-serif` |
+| `--font-display` | `var(--font-fraunces), Georgia, serif` |
+| `--font-body` | `var(--font-inter), system-ui, sans-serif` |
 
 Helpers propios: `.editorial-grid` (12 col), `.meta-label`, `.rule`, `.img-editorial` (+ hover scale), `.reveal`, `.prose-editorial`.
 
@@ -47,5 +48,5 @@ Helpers propios: `.editorial-grid` (12 col), `.meta-label`, `.rule`, `.img-edito
 - Sin ORM, sin NextAuth, sin CMS headless, sin librería de formularios, sin i18n.
 - Pruebas con `node:test`: `npm test`. El E2E HTTP queda omitido si no hay variables `E2E_*`.
 - Acceso editorial con Supabase Auth y roles `owner` o `moderator`. `ADMIN_TOKEN` y la cookie `dh_admin` quedan como fallback temporal (ver `docs/PRODUCT/05-flujos-editoriales.md`).
-- `README.md` es el default de `create-next-app`, no describe este proyecto — este `Tech/` lo sustituye en la práctica.
+- `README.md` describe el proyecto y apunta a `docs/`. El detalle de stack vive en esta carpeta.
 - `AGENTS.md` / `CLAUDE.md` solo contienen la regla de agente de Next (leer `node_modules/next/dist/docs/` antes de codificar).

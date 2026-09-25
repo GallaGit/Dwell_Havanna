@@ -16,8 +16,16 @@ npm run build    # build de producción; no requiere secretos de Supabase
 npm run start    # sirve el build
 ```
 
-Copia `.env.example` a `.env.local`. No commitees secretos.
+Copia `.env.example` a `.env.local`. No commitees secretos. El email de contacto es `NEXT_PUBLIC_CONTACT_EMAIL`. Si falta, el sitio muestra `hola@dwellhavana.example`.
+
+Las páginas públicas se prerenderizan (estáticas o ISR de una hora). El login, `/admin/review`, `POST /api/submissions` y `/auth/callback` siguen dinámicos.
+
+Para listar el SQL canónico sin aplicarlo:
+
+```bash
+scripts/apply-canonical-sql.sh
+```
 
 ## Documentación
 
-La documentación canónica está en [`docs/README.md`](docs/README.md). El siguiente paso de producto es el Paso 2 de [`docs/PRODUCT/roadmap.md`](docs/PRODUCT/roadmap.md).
+La documentación canónica está en [`docs/README.md`](docs/README.md). El trabajo de código previo al despliegue está en [`docs/Tech/07-rendimiento.md`](docs/Tech/07-rendimiento.md) y en [`docs/PRODUCT/contenido-placeholder.md`](docs/PRODUCT/contenido-placeholder.md). Lo que queda fuera del repositorio es el Paso 2 de [`docs/PRODUCT/roadmap.md`](docs/PRODUCT/roadmap.md).

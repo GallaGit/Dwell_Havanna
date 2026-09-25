@@ -135,7 +135,7 @@ export default function ContribuirPage() {
         </button>
 
         {state.kind === "done" && (
-          <p className="border border-ink p-4 text-sm leading-6">
+          <p role="status" className="border border-ink p-4 text-sm leading-6">
             Received. We will review it and let you know if it is published.{" "}
             <Link href="/" className="underline underline-offset-4">
               Back to the home page
@@ -143,7 +143,7 @@ export default function ContribuirPage() {
           </p>
         )}
         {state.kind === "error" && (
-          <p className="border border-red-800/60 p-4 text-sm leading-6">
+          <p role="alert" className="border border-red-800/60 p-4 text-sm leading-6">
             {state.message}
           </p>
         )}

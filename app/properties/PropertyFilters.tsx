@@ -33,7 +33,7 @@ export default function PropertyFilters({ properties }: { properties: Property[]
       <div className="editorial-grid mt-8">
         {filtered.map((property, index) => (
           <div key={property.slug} className={`col-span-12 md:col-span-6 ${index === 1 ? "md:mt-20" : ""} ${index === 2 ? "md:col-start-4" : ""}`}>
-            <PropertyEntry property={property} />
+            <PropertyEntry property={property} heading="h2" />
           </div>
         ))}
       </div>

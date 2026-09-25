@@ -3,7 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPostBySlug, listPublishedPosts } from "@/lib/content";
-import { canonicalFor } from "@/lib/site";
+import { deliveryImageUrl } from "@/lib/image-delivery";
+import { canonicalFor, siteName } from "@/lib/site";
 
 export const revalidate = 3600;
 
@@ -16,23 +17,24 @@ export async function generateMetadata({
   const post = await getPostBySlug(slug);
   if (!post) return {};
   const url = canonicalFor(`/journal/${post.slug}`);
-  const title = `${post.title} — Dwell Havana`;
+  const title = post.title;
+  const image = deliveryImageUrl(post.image);
   return {
     title,
     description: post.excerpt,
-    alternates: { canonical: url },
+    alternates: { canonical: `/journal/${post.slug}` },
     openGraph: {
-      title,
+      title: `${title} — Dwell Havana`,
       description: post.excerpt,
       url,
       type: "article",
-      images: [{ url: post.image, alt: post.title }],
+      images: [{ url: image, alt: post.title }],
     },
     twitter: {
       card: "summary_large_image",
-      title,
+      title: `${title} — Dwell Havana`,
       description: post.excerpt,
-      images: [post.image],
+      images: [image],
     },
   };
 }
@@ -47,31 +49,43 @@ export default async function JournalDetail({ params }: { params: Promise<{ slug
   const post = await getPostBySlug(slug);
   if (!post) return notFound();
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.title,
+    description: post.excerpt,
+    image: deliveryImageUrl(post.image),
+    mainEntityOfPage: canonicalFor(`/journal/${post.slug}`),
+    publisher: { "@type": "Organization", name: siteName },
+  };
+
   return (
     <article className="mx-auto max-w-[1400px] px-5 md:px-10 pt-10 md:pt-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
       <p className="meta-label mb-3">{post.category} — {post.date} — {post.readingTime}</p>
       <h1 className="font-display text-4xl md:text-6xl leading-[1.02] max-w-4xl">{post.title}</h1>
       <p className="mt-5 max-w-xl text-[15px] leading-8 text-charcoal/85">{post.excerpt}</p>
       <div className="img-editorial mt-10 aspect-[16/9]">
-        <Image src={post.image} alt={post.title} width={2000} height={1125} priority quality={70} sizes="100vw" className="h-full w-full object-cover" />
+        <Image
+          src={post.image}
+          alt={post.title}
+          width={2000}
+          height={1125}
+          preload
+          fetchPriority="high"
+          quality={70}
+          sizes="(max-width: 768px) calc(100vw - 40px), (max-width: 1480px) calc(100vw - 80px), 1320px"
+          className="h-full w-full object-cover"
+        />
       </div>
       <div className="editorial-grid mt-10">
         <div className="col-span-12 md:col-span-6 md:col-start-4 prose-editorial text-[15px]">
-          <p>
-            Havana rewards slow looking. In this house — as in so many across
-            Miramar, Vedado and Centro — the essential decisions are about
-            light and air before they are about objects.
-          </p>
-          <p>
-            Thick walls hold the cool of the night. Shutters and breeze-block
-            break the sun into workable bands. A patio, a balcony or a gallery
-            does the work that mechanical systems do elsewhere.
-          </p>
-          <p>
-            Dwell Havana documents these logics with photography first: material
-            close-ups, inhabited rooms, traces of repair. Imperfection is not
-            styled out — it is the evidence that a place is lived in.
-          </p>
+          {post.body.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
         </div>
       </div>
       <div className="mt-12 flex justify-between border-t rule pt-4">

@@ -16,6 +16,7 @@ Copiar `.env.example` → `.env.local` (gitignoreado, nunca commitear).
 | `SUPABASE_SERVICE_ROLE_KEY` | **No, solo server** | `lib/db.ts`, API submissions, admin e invitaciones |
 | `ADMIN_TOKEN` | **No, solo server** | `app/admin/review/page.tsx` (cookie `dh_admin`) |
 | `ADMIN_TOKEN_TTL_SECONDS` | **No, solo server** | Duración de la cookie fallback; default 7 días |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | Sí | `mailto` de `/about` y del footer. Si falta, `hola@dwellhavana.example` |
 
 > Nota: `docs/Idea/Fase-1-Cierre.md §4` cita `NEXT_PUBLIC_SUPABASE_ANON_KEY`; el `.env.example` actual usa `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (nuevo formato Supabase). Manda el `.env.example`.
 
@@ -45,14 +46,18 @@ La plantilla por defecto (`{{ .ConfirmationURL }}`) verifica el token en Supabas
 
 ```bash
 npm run dev                 # desarrollo
-npm run build               # SSG+ISR
-npm run start               # producción
+npm run build               # SSG+ISR; no necesita secretos reales
+npm run start               # producción local
 npm run lint                # eslint next core-web-vitals + typescript
 npm test                    # unit tests; el E2E HTTP se omite sin E2E_*
 npm run test:editorial-auth # solo la política de roles
+scripts/apply-canonical-sql.sh            # lista el SQL; no conecta
+scripts/apply-canonical-sql.sh --with-seed
 ```
 
-Verificación Fase 1: `lint ✓` + `build ✓`.
+`scripts/apply-canonical-sql.sh --apply` exige `DATABASE_URL` y `psql`. Si la URL contiene el ref de producción `sfujmwumtzuzwwhfmyxa`, el script se niega salvo `--allow-production`. No lo ejecutes contra producción desde un agente. El alta del primer `owner` queda fuera del script, con el `auth_user_id` real.
+
+Verificación de esta preparación: `lint`, `test` (17 pasan, 1 E2E omitido) y `build`. El detalle de Lighthouse está en `docs/Tech/07-rendimiento.md`.
 
 ## Activación (lado humano)
 
@@ -86,6 +91,20 @@ reutilizar cookies o estado del servidor de desarrollo con:
 ```bash
 npm run test:editorial-auth
 ```
+
+## Cabeceras y proxy
+
+`next.config.ts` añade en todas las rutas `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` y `Permissions-Policy` sin cámara, micrófono ni geolocalización.
+
+`proxy.ts` pone `X-Frame-Options: SAMEORIGIN` y `frame-ancestors 'self'`, salvo en `/embed`, que solo lleva `frame-ancestors *` para que un tercero pueda usar el iframe. `X-Frame-Options` no va en `next.config.ts`: esa cabecera también alcanzaría al embed.
+
+Si la petición no trae cookie `sb-<ref>-auth-token` (ni un trozo `.0`), el proxy no llama a Supabase Auth. Una visita anónima a una página pública no refresca sesión. Si la cookie existe, el refresco sigue en todas las rutas del matcher, incluidas las públicas.
+
+Las lecturas públicas usan `getPublishedContentClient()` (`lib/db.ts`): `fetch` con `next: { revalidate: 3600, tags: ["published-content"] }`. `getServiceClient()` sigue en `cache: "no-store"` para la cola y las mutaciones. Al aprobar, el panel llama a `updateTag("published-content")`.
+
+## Variables en Vercel
+
+Cuando exista el proyecto, configura las mismas claves de `.env.example`. `SUPABASE_SERVICE_ROLE_KEY` y `ADMIN_TOKEN` son secretos de servidor. `NEXT_PUBLIC_*` se incrustan en el cliente en el build. `NEXT_PUBLIC_SITE_URL` es `https://dwellhavana.com` (o el host real, sin barra final).
 
 ## Seguridad mínima
 

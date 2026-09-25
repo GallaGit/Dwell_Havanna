@@ -21,6 +21,7 @@
 4. `04-backend-datos-supabase.md` — `lib/db.ts`, `lib/content.ts`, `lib/data.ts`, schema SQL, Storage.
 5. Los flujos editoriales viven en `docs/PRODUCT/05-flujos-editoriales.md`, no en esta carpeta.
 6. `06-config-operacion.md` — env vars, scripts, activación Supabase, seguridad.
+7. `07-rendimiento.md` — Lighthouse local contra `next start`, objetivos y qué se midió.
 
 ## Documentación de producto
 

@@ -1,4 +1,5 @@
 import { listPublishedProperties, listPublishedPosts } from "@/lib/content";
+import { deliveryImageUrl } from "@/lib/image-delivery";
 import { canonicalFor, siteUrl } from "@/lib/site";
 
 export const revalidate = 3600;
@@ -22,14 +23,14 @@ export async function GET(): Promise<Response> {
       title: p.title,
       description: p.excerpt,
       url: canonicalFor(`/journal/${p.slug}`),
-      image: p.image,
+      image: deliveryImageUrl(p.image),
       category: p.category,
     })),
     ...properties.map((p) => ({
       title: `${p.name} — ${p.location}`,
       description: p.description,
       url: canonicalFor(`/properties/${p.slug}`),
-      image: p.cover,
+      image: deliveryImageUrl(p.cover),
       category: "Property",
     })),
   ];

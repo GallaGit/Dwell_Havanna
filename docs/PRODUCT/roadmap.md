@@ -74,7 +74,7 @@ Este documento reúne el trabajo hecho, los pasos de activación y las fases sig
 
 - [x] Ejecutar `npm run lint` con resultado correcto.
 - [x] Ejecutar `npm run build` con resultado correcto.
-- [x] Verificar las rutas de la build de Fase 1. La build del 2026-09-25 lista 19 paths (ver Estado de validación). La cifra 21 no corresponde a rutas extra.
+- [x] Verificar las rutas de la build de Fase 1. La tabla vigente está en `docs/Tech/03-frontend-rutas-render.md`. La cifra 21 no corresponde a rutas extra.
 - [x] Resolver el bloqueo histórico `403 unknown_contributor` con un servidor de desarrollo fresco.
 - [x] Documentar el problema local de certificados TLS sin incorporarlo al código ni a la configuración de producción.
 
@@ -88,7 +88,7 @@ Las optimizaciones de imagen ya están en `main` desde el PR #2 (`c100222`, `per
 - [x] Definir `sizes` responsive en las imágenes principales.
 - [x] Ejecutar `npm run lint`.
 - [x] Ejecutar `npm run build`.
-- [ ] Revisar visualmente home, property detail y journal detail en móvil y escritorio.
+- [ ] Revisar visualmente home, property detail y journal detail en móvil y escritorio. El contraste y el orden de encabezados se midieron con Lighthouse local (`docs/Tech/07-rendimiento.md`); falta la revisión humana de composición.
 
 ## Iteración: tests automatizados
 
@@ -193,27 +193,45 @@ Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. En testing ya hay 
 - Una cuenta desactivada pierde el acceso aunque conserve una sesión anterior.
 - Un colaborador no puede enviar usando el handle de otra persona.
 
+## Preparación de producción en el código
+
+Hecho en el repositorio el 2026-09-25. No despliega ni toca Supabase.
+
+- [x] Corregir el open redirect de `/iniciar-sesion` (`lib/safe-redirect.ts`). Viene del PR #8.
+- [x] Añadir `npm run build` a CI. Viene del PR #8.
+- [x] Dejar las páginas públicas en estático o ISR de una hora, también con `SUPABASE_SERVICE_ROLE_KEY` definida. La portada no lee cookies.
+- [x] Saltar `getUser()` en `proxy.ts` cuando la petición no trae cookie de Supabase Auth.
+- [x] Quitar `.reveal` de la foto principal. Ajustar `sizes` y no duplicar la foto de arquitectura en la portada.
+- [x] Servir OG, RSS y embed a través de `/_next/image` (1200px, calidad 70).
+- [x] Subir el contraste de `--color-muted` a `#6f685e` (AA sobre paper y cream) y corregir el orden de encabezados en los índices.
+- [x] Dejar un solo `id="contact"`, en `/about`.
+- [x] Añadir `metadataBase`, Open Graph por defecto, `app/robots.ts`, manifiesto e iconos provisionales.
+- [x] Centralizar fotos, párrafos y email de prueba en `lib/placeholders.ts`. El email real es `NEXT_PUBLIC_CONTACT_EMAIL`.
+- [x] Documentar el SQL canónico en `scripts/apply-canonical-sql.sh` (dry-run por defecto).
+- [x] Medir Lighthouse local contra `next start`. Resultados en `docs/Tech/07-rendimiento.md`.
+- [x] Hacer funcional el filtro de temas de `/journal` (`app/journal/JournalIndex.tsx`). Antes los chips no filtraban.
+
 ## Paso 2: activar Supabase y producción
 
-Requiere credenciales y acciones fuera del repositorio. No hay hosting configurado.
+Requiere credenciales y acciones de la dueña, fuera del repositorio. El código está preparado para Vercel. No hay proyecto de hosting creado.
 
-Este paso activa producción. Las migraciones editoriales ya están en el repositorio y en testing. En producción se aplican con el orden SQL de abajo, antes de retirar `ADMIN_TOKEN`.
+Este paso activa producción. Las migraciones editoriales ya están en el repositorio y en testing. En producción se aplican con el orden SQL de abajo, antes de retirar `ADMIN_TOKEN`. El script `scripts/apply-canonical-sql.sh` lista ese orden y, con `--apply`, lo ejecuta si hay `DATABASE_URL` y `psql`. El ref `sfujmwumtzuzwwhfmyxa` queda bloqueado salvo `--allow-production`.
 
 El 2026-09-15 el proyecto de producción (`sfujmwumtzuzwwhfmyxa`, `docs/Idea/Fase-1-Cierre.md` §8) ya tenía `supabase/01-schema.sql`, `supabase/02-seed.sql`, colaboradores en `verified_contributors` y el bucket `dwell-media`. Ese proyecto ahora no resuelve (probable pausa o borrado). Esas cuatro piezas quedan **a re-verificar**, no como hechas.
 
 ### Hosting, dominio y variables
 
-- [ ] Elegir hosting. Vercel es el recomendado.
+- [ ] Crear el proyecto en Vercel (el hosting previsto) y conectar este repositorio.
 - [ ] Renovar el dominio `dwellhavana.com` antes del 2026-10-06.
 - [ ] Apuntar el DNS del apex y de `www` al hosting.
-- [ ] En Supabase Auth, fijar la Site URL `https://<dominio>` y la allowlist de redirecciones `https://<dominio>/auth/callback`. Si el sitio también responde en `www`, permitir ese host.
-- [ ] Configurar `NEXT_PUBLIC_SITE_URL` con el dominio real. Sin esa variable, las invitaciones usan `http://localhost:3000` y solo se abren en la máquina que ejecuta la app.
-- [ ] Configurar `NEXT_PUBLIC_SUPABASE_URL`.
-- [ ] Configurar `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
-- [ ] Configurar `SUPABASE_SERVICE_ROLE_KEY` solo en el servidor.
-- [ ] Generar un `ADMIN_TOKEN` largo y privado.
+- [ ] Restaurar o recrear el proyecto Supabase de producción y aplicar las migraciones en el orden de abajo.
+- [ ] En Supabase Auth, fijar la Site URL `https://dwellhavana.com` y la allowlist `https://dwellhavana.com/auth/callback`. Si el sitio también responde en `www`, permitir ese host.
+- [ ] Configurar las plantillas Invite user y Magic Link con `token_hash` y `type`, como en `docs/Tech/06-config-operacion.md`.
+- [ ] Configurar en Vercel `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_TOKEN` y, cuando exista el buzón, `NEXT_PUBLIC_CONTACT_EMAIL`.
 - [ ] Desplegar la aplicación.
 - [ ] Confirmar que ninguna variable secreta se expone al navegador.
+- [ ] Ejecutar Lighthouse contra el dominio de producción. Objetivo: Performance ≥ 90 y Accesibilidad ≥ 95 en móvil (`docs/Tech/07-rendimiento.md`).
+- [ ] Sustituir imágenes, textos e iconos provisionales (`docs/PRODUCT/contenido-placeholder.md`).
 
 La plantilla de los emails de invitación y de magic link está en `docs/Tech/06-config-operacion.md`.
 
@@ -337,9 +355,10 @@ Controles que el código y el esquema ya aplican. La evidencia está en el repos
 
 ## Estado de validación local y de testing
 
-- `npm run lint`, `npm test` y `npm run build` pasan en la revisión del 2026-09-25. La build no necesita secretos de Supabase.
-- `npm test` pasa 13 pruebas y omite 1 E2E HTTP porque no hay variables `E2E_*`.
-- `npm run build` (Next.js 16.3.5) lista 19 paths de la app. No cuenta `/_not-found` ni las etiquetas de grupo `/journal/[slug]` y `/properties/[slug]`. Esas dos etiquetas, sumadas a los 19 paths, son las 21 líneas que una nota anterior llamó «21 rutas» sin volver a ejecutar la build. El 19 de Fase 1 era otra tabla: 17 paths de entonces más esas dos etiquetas, antes de `/iniciar-sesion` y `/auth/callback`. La lista vigente está en `docs/Tech/03-frontend-rutas-render.md`.
+- `npm run lint`, `npm test` y `npm run build` pasan en la revisión del 2026-09-25. La build no necesita secretos reales de Supabase. Con URL y service role de ejemplo, `/` sigue en ISR de una hora.
+- `npm test` pasa 17 pruebas y omite 1 E2E HTTP porque no hay variables `E2E_*`.
+- La tabla de rutas vigente está en `docs/Tech/03-frontend-rutas-render.md`. La cifra 19 es anterior a iconos, `robots.txt`, manifiesto y los slugs prerenderizados de `/embed`.
+- Lighthouse local (móvil y escritorio, `next start`) está en `docs/Tech/07-rendimiento.md`.
 - El E2E, cuando se configura, valida autenticación requerida, derechos obligatorios, colaborador desconocido, submission válida, persistencia y limpieza.
 - RLS no devuelve filas a la clave publishable para `editorial_members`, `moderation_events` ni `verified_contributors`.
 - Testing tiene aplicadas `20260921000100_contributor_auth.sql`, `20260921000200_editorial_permissions.sql` y `20260921000300_editorial_member_management.sql`.
@@ -379,4 +398,6 @@ Después valida `/iniciar-sesion?next=/admin/review`, la cola de moderación y l
 - `docs/Tech/04-backend-datos-supabase.md`
 - `docs/PRODUCT/05-flujos-editoriales.md`
 - `docs/Tech/06-config-operacion.md`
+- `docs/Tech/07-rendimiento.md`
+- `docs/PRODUCT/contenido-placeholder.md`
 - `docs/PRODUCT/07-guia-acceso-colaboradores.md`

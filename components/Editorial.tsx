@@ -35,7 +35,21 @@ export function SectionHeading({
   );
 }
 
-export function PropertyEntry({ property, large = false }: { property: Property; large?: boolean }) {
+const propertySizes = "(max-width: 768px) calc(100vw - 40px), min(700px, 50vw)";
+const journalSizes = "(max-width: 640px) calc(100vw - 40px), (max-width: 1024px) 50vw, min(440px, 33vw)";
+
+export function PropertyEntry({
+  property,
+  large = false,
+  sizes = propertySizes,
+  heading = "h3",
+}: {
+  property: Property;
+  large?: boolean;
+  sizes?: string;
+  heading?: "h2" | "h3";
+}) {
+  const Title = heading;
   return (
     <Link href={`/properties/${property.slug}`} className="group block">
       <div className="img-editorial aspect-[4/3]">
@@ -45,20 +59,20 @@ export function PropertyEntry({ property, large = false }: { property: Property;
           width={1400}
           height={1050}
           quality={70}
-          sizes="(max-width: 768px) calc(100vw - 40px), 50vw"
+          sizes={sizes}
           className="h-full w-full object-cover"
         />
       </div>
       <div className="pt-4 grid md:grid-cols-12 gap-2">
         <div className="md:col-span-7">
           <p className="meta-label mb-1.5">{property.location}</p>
-          <h3
+          <Title
             className={`font-display leading-tight group-hover:opacity-70 transition-opacity ${
               large ? "text-2xl md:text-3xl" : "text-xl md:text-2xl"
             }`}
           >
             {property.name}
-          </h3>
+          </Title>
         </div>
         <div className="md:col-span-5">
           <p className="meta-label mb-1.5">{property.character}</p>
@@ -69,7 +83,19 @@ export function PropertyEntry({ property, large = false }: { property: Property;
   );
 }
 
-export function JournalEntry({ post }: { post: JournalPost }) {
+export function JournalEntry({
+  post,
+  sizes = journalSizes,
+  heading = "h3",
+  priorityImage = false,
+}: {
+  post: JournalPost;
+  sizes?: string;
+  heading?: "h2" | "h3";
+  /** Primera tarjeta visible: el LCP del índice no debe ir en lazy. */
+  priorityImage?: boolean;
+}) {
+  const Title = heading;
   return (
     <Link href={`/journal/${post.slug}`} className="group block">
       <div className="img-editorial aspect-[3/2]">
@@ -79,16 +105,18 @@ export function JournalEntry({ post }: { post: JournalPost }) {
           width={1200}
           height={800}
           quality={70}
-          sizes="(max-width: 640px) calc(100vw - 40px), (max-width: 1024px) 50vw, 58vw"
+          sizes={sizes}
+          preload={priorityImage}
+          fetchPriority={priorityImage ? "high" : undefined}
           className="h-full w-full object-cover"
         />
       </div>
       <p className="meta-label mt-4 mb-2">
         {post.category} · {post.date}
       </p>
-      <h3 className="font-display text-xl md:text-2xl leading-snug group-hover:opacity-70 transition-opacity">
+      <Title className="font-display text-xl md:text-2xl leading-snug group-hover:opacity-70 transition-opacity">
         {post.title}
-      </h3>
+      </Title>
       <p className="mt-2 text-sm leading-6 text-charcoal/80">{post.excerpt}</p>
       <p className="meta-label mt-3">{post.readingTime} read</p>
     </Link>

@@ -12,9 +12,9 @@ Toda lectura pública pasa por `lib/content.ts`. Si hay Supabase configurado lee
 
 | Archivo | Export | Notas |
 |---|---|---|
-| `lib/db.ts` | `getServiceClient()` | `createClient(url, service_role, {persistSession:false})`, cacheado. `null` si faltan `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`. **Nunca importar desde cliente.** |
-| `lib/content.ts` | `listPublishedProperties()`, `getPropertyBySlug()`, `listPublishedPosts()`, `getPostBySlug()` | `eq("status","published")`, `order("published_at", desc)`. Mapea `date_label→date`, `reading_time→readingTime`. `try/catch → fallback`. |
-| `lib/data.ts` | `Property`, `JournalPost`, `properties[3]`, `journalPosts[4]`, `getProperty`, `getPost` | Helper `img(id)` a `images.unsplash.com`. Campos property: slug/name/location/character/description/cover/images/facts/architecture/interior/story. |
+| `lib/db.ts` | `getPublishedContentClient()`, `getServiceClient()` | El primero usa `fetch` con `revalidate: 3600` y el tag `published-content`. El segundo sigue en `cache: "no-store"` para la cola y las mutaciones. Ambos devuelven `null` si faltan la URL o la service role. **Nunca importar desde cliente.** |
+| `lib/content.ts` | `listPublishedProperties()`, `getPropertyBySlug()`, `listPublishedPosts()`, `getPostBySlug()` | Envueltos en `cache()`. El slug consulta `.eq("slug")`. Si la query falla, cae a `lib/data.ts`. Si la query responde y no hay fila, devuelve `undefined`. El cuerpo del post es el placeholder de `lib/placeholders.ts`. |
+| `lib/data.ts` | `Property`, `JournalPost`, `properties[3]`, `journalPosts[4]` | Las URLs de foto salen de `lib/placeholders.ts`. |
 | `lib/site.ts` | `siteUrl`, `canonicalFor(path)` | `NEXT_PUBLIC_SITE_URL ?? "https://dwellhavana.com"`, trim `/` final. Usado en OG, sitemap, feed, embed. |
 
 ## Schema (`supabase/01-schema.sql`)
