@@ -29,18 +29,16 @@ La invitación permite enviar contenido. No publica contenido de forma automáti
 
 ## Permisos editoriales
 
-El panel acepta cuentas `owner` y `moderator` con Supabase Auth. `ADMIN_TOKEN` queda como fallback temporal. Ese fallback puede invitar colaboradores. No puede cambiar roles ni activar o desactivar miembros. `trusted_contributor` sigue previsto y no está en `editorial_members`.
+El panel acepta cuentas `owner` y `moderator` con Supabase Auth. `ADMIN_TOKEN` queda como fallback temporal. Ese fallback puede invitar colaboradores. No puede cambiar roles ni activar o desactivar miembros.
 
 `owner` y `moderator` ya usan una cuenta individual de Supabase. La propietaria otorga o retira esos permisos desde `/admin/review`. Cada moderador usa su propia cuenta. El sistema registra quién aprobó o rechazó cada envío.
 
 | Rol | Función | Estado |
 |---|---|---|
 | `contributor` | Envía contenido y espera revisión. | Implementado en `verified_contributors`. No es una fila de `editorial_members`. |
-| `trusted_contributor` | Envía contenido y crea un borrador automático, sin publicación directa. | Previsto. No está en el esquema. |
 | `moderator` | Revisa, aprueba y rechaza envíos. Aprobar publica el post de comunidad. No gestiona permisos. | Implementado. |
 | `owner` | Gestiona colaboradores, moderadores y permisos. También aprueba y publica. | Implementado. |
 
-El permiso `trusted_contributor` no elimina la autenticación. La cuenta debe tener una sesión válida y seguir vinculada al handle correcto. La publicación automática no forma parte de esta fase.
 
 El orden de implementación está documentado en `docs/PRODUCT/roadmap.md`, sección **Evolución de permisos editoriales**.
 

@@ -126,13 +126,8 @@ Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. En testing ya hay 
 | Rol | Puede enviar | Puede revisar | Puede aprobar o rechazar | Puede invitar colaboradores | Puede gestionar permisos | Puede publicar |
 |---|---:|---:|---:|---:|---:|---:|
 | `contributor` | Sí | No | No | No | No | No |
-| `trusted_contributor` | Sí | No | No | No | No | No |
 | `moderator` | Opcional | Sí | Sí | No | No | Sí, al aprobar un envío de comunidad |
 | `owner` | Opcional | Sí | Sí | Sí | Sí | Sí |
-
-`trusted_contributor` no será un bypass de seguridad. La API seguirá exigiendo una sesión válida y el vínculo entre `auth_user_id` y `handle`.
-
-El permiso de confianza permitirá marcar el envío como aprobado automáticamente y crear un borrador de Journal. El borrador seguirá necesitando una acción editorial para publicarse. La publicación automática queda fuera de esta fase.
 
 ### Orden obligatorio de implementación
 
@@ -144,7 +139,6 @@ El permiso de confianza permitirá marcar el envío como aprobado automáticamen
 2. **Crear el esquema de roles**
    - [x] Crear una migración para `editorial_members`.
    - [x] Añadir `role`, `active`, `display_name`, `created_at` y `updated_at`.
-   - [ ] Añadir el campo de confianza a `verified_contributors`.
    - [x] Crear `moderation_events` para la auditoría.
    - [x] Mantener RLS activo y usar el cliente de servicio solo desde el servidor.
 
@@ -172,17 +166,10 @@ El permiso de confianza permitirá marcar el envío como aprobado automáticamen
    - [x] Guardar un evento de auditoría para cada decisión.
    - [x] Rechazar dos decisiones simultáneas sobre el mismo envío mediante la condición `status='pending'`.
 
-7. **Añadir contribuidores de confianza**
-   - Permitir que `owner` otorgue o retire `trusted_contributor`.
-   - Mantener la validación de identidad y del handle.
-   - Crear automáticamente el borrador de Journal tras un envío válido.
-   - Mantener la publicación final bajo una acción editorial explícita.
-
-8. **Añadir pruebas y retirar el fallback**
+7. **Añadir pruebas y retirar el fallback**
    - [x] Cubrir `owner`, `moderator`, miembro inactivo y el fallback temporal en `tests/editorial-permissions.test.mjs`.
    - Probar en navegador la revocación de una cuenta que ya tenía sesión.
    - Probar en navegador la auditoría de aprobaciones y rechazos.
-   - Probar el flujo de confianza sin publicación directa.
    - Retirar `ADMIN_TOKEN` cuando el acceso `owner` individual esté verificado en producción.
 
 ### Correcciones y retiro solicitados por contribuidores
@@ -199,7 +186,6 @@ El permiso de confianza permitirá marcar el envío como aprobado automáticamen
 ### Casos que deben quedar cubiertos
 
 - Un colaborador normal crea un envío `pending`.
-- Un contribuidor de confianza crea un borrador sin entrar en la cola normal.
 - Un moderador aprueba un envío y queda registrado como autor de la decisión.
 - Un moderador rechaza un envío y queda registrado como autor de la decisión.
 - Un moderador no puede invitar colaboradores.
@@ -207,7 +193,6 @@ El permiso de confianza permitirá marcar el envío como aprobado automáticamen
 - Un colaborador no puede abrir el panel editorial.
 - Una cuenta desactivada pierde el acceso aunque conserve una sesión anterior.
 - Un colaborador no puede enviar usando el handle de otra persona.
-- Ningún flujo de confianza publica directamente durante esta fase.
 
 ## Paso 2: activar Supabase y producción
 
