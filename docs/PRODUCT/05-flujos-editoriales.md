@@ -40,12 +40,11 @@ El modelo usa una cuenta individual de Supabase para cada miembro editorial:
 
 - `owner`: administra colaboradores, moderadores, permisos y publicación.
 - `moderator`: revisa, aprueba y rechaza envíos. No administra permisos.
-- `trusted_contributor`: puede saltar la cola inicial y crear un borrador automático, pero no publica directamente.
 - `contributor`: envía contenido y espera revisión.
 
-La API seguirá comprobando la sesión y la relación `auth_user_id` ↔ `handle` para todos los contribuidores. El permiso de confianza no elimina esa comprobación.
+La API seguirá comprobando la sesión y la relación `auth_user_id` ↔ `handle` para todos los contribuidores.
 
-El roadmap define el orden de migración en `docs/PRODUCT/roadmap.md`, sección **Evolución de permisos editoriales**. La migración debe crear primero el modelo de roles, después la autorización server-side, luego los moderadores y, al final, el flujo de confianza.
+El roadmap define el orden de migración en `docs/PRODUCT/roadmap.md`, sección **Evolución de permisos editoriales**. La migración debe crear primero el modelo de roles, después la autorización server-side y luego los moderadores.
 
 La tabla `moderation_events` guarda la cuenta, la acción, el envío afectado y la fecha de cada decisión de moderación. En testing, la tabla existe y RLS no expone filas mediante la clave publishable.
 

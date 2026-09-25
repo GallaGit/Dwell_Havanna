@@ -36,13 +36,11 @@ La versión prevista dará a cada miembro editorial una cuenta individual de Sup
 | Rol | Función |
 |---|---|
 | `contributor` | Envía contenido y espera revisión. |
-| `trusted_contributor` | Envía contenido y crea un borrador automático, sin publicación directa. |
 | `moderator` | Revisa, aprueba y rechaza envíos. No gestiona permisos. |
 | `owner` | Gestiona colaboradores, moderadores, permisos y publicación. |
 
 La propietaria otorgará o retirará estos permisos desde un panel editorial. Cada moderador usará su propia cuenta. El sistema registrará quién aprobó o rechazó cada envío.
 
-El permiso `trusted_contributor` no elimina la autenticación. La cuenta debe tener una sesión válida y seguir vinculada al handle correcto. La publicación automática no forma parte de esta fase.
 
 El orden de implementación está documentado en `docs/PRODUCT/roadmap.md`, sección **Evolución de permisos editoriales**.
 
