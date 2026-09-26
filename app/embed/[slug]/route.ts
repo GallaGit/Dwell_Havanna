@@ -1,9 +1,5 @@
-import {
-  getPropertyBySlug,
-  getPostBySlug,
-  listPublishedPosts,
-  listPublishedProperties,
-} from "@/lib/content";
+import { listPublishedPosts, listPublishedProperties } from "@/lib/content";
+import { embedStaticParams, pickEmbedSubject } from "@/lib/embed";
 import { deliveryImageUrl } from "@/lib/image-delivery";
 import { canonicalFor } from "@/lib/site";
 
@@ -14,11 +10,7 @@ export async function generateStaticParams(): Promise<{ slug: string }[]> {
     listPublishedProperties(),
     listPublishedPosts(),
   ]);
-  const slugs = new Set<string>([
-    ...properties.map((property) => property.slug),
-    ...posts.map((post) => post.slug),
-  ]);
-  return [...slugs].map((slug) => ({ slug }));
+  return embedStaticParams(properties, posts);
 }
 
 function esc(s: string): string {
@@ -31,28 +23,38 @@ function esc(s: string): string {
 
 /**
  * Embed ligero para sitios terceros: /embed/<slug>?utm_source=<partner>
- * Resuelve properties y journal. HTML standalone pensado para <iframe>.
+ * Renderiza una property publicada o un post del journal.
+ * El slug sale de la lista de su tabla (`properties` o `journal_posts`):
+ * un slug de journal no se consulta en `properties`.
+ * HTML standalone pensado para <iframe>. 404 si no está publicado.
  */
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ slug: string }> }
 ): Promise<Response> {
   const { slug } = await params;
-  const property = await getPropertyBySlug(slug);
-  const post = property ? null : await getPostBySlug(slug);
+  const [properties, posts] = await Promise.all([
+    listPublishedProperties(),
+    listPublishedPosts(),
+  ]);
+  const subject = pickEmbedSubject(slug, properties, posts);
 
-  if (!property && !post) {
+  if (!subject) {
     return new Response("Not found", { status: 404 });
   }
 
-  const title = property ? property.name : post!.title;
-  const subtitle = property
-    ? `${property.location} — ${property.character}`
-    : `${post!.category} — ${post!.date}`;
-  const image = deliveryImageUrl(property ? property.cover : post!.image);
-  const url = property
-    ? canonicalFor(`/properties/${property.slug}`)
-    : canonicalFor(`/journal/${post!.slug}`);
+  const title = subject.kind === "property" ? subject.property.name : subject.post.title;
+  const subtitle =
+    subject.kind === "property"
+      ? `${subject.property.location} — ${subject.property.character}`
+      : `${subject.post.category} — ${subject.post.date}`;
+  const image = deliveryImageUrl(
+    subject.kind === "property" ? subject.property.cover : subject.post.image,
+  );
+  const url =
+    subject.kind === "property"
+      ? canonicalFor(`/properties/${subject.property.slug}`)
+      : canonicalFor(`/journal/${subject.post.slug}`);
 
   const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{margin:0;font-family:Georgia,serif;background:#faf8f4;color:#1a1a1a}a{color:inherit;text-decoration:none}img{display:block;width:100%;height:auto}.wrap{max-width:480px}.meta{padding:12px 14px}.kicker{font-family:Arial,sans-serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#6f685e;margin:0 0 6px}.title{font-size:19px;line-height:1.25;margin:0 0 8px}.brand{font-family:Arial,sans-serif;font-size:11px;color:#6f685e}.brand b{color:#1a1a1a}</style></head><body><a href="${esc(url)}" target="_blank" rel="noopener"><div class="wrap"><img src="${esc(image)}" alt="${esc(title)}" width="1200" height="800" loading="lazy"><div class="meta"><p class="kicker">${esc(subtitle)}</p><p class="title">${esc(title)}</p><p class="brand">Vía <b>Dwell Havana</b> — guía editorial de arquitectura habanera</p></div></div></a></body></html>`;
 

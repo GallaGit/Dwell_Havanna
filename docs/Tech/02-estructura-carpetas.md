@@ -49,7 +49,9 @@ La documentación de producto está en `docs/PRODUCT/`. Esta página describe la
 │   ├── placeholders.ts     # PLACEHOLDER: fotos, párrafos y email de prueba
 │   ├── content.ts          # capa contenido: lee Supabase o cae a data.ts
 │   ├── db.ts               # lecturas públicas ISR y servicio no-store
+│   ├── site-url.mjs        # resolveSiteUrl: vacío o inválido → dwellhavana.com
 │   ├── site.ts             # siteUrl + canonicalFor(path)
+│   ├── embed.ts            # slug de /embed → property o post, sin cruzar tablas
 │   ├── page-metadata.ts    # canonical, Open Graph y Twitter por página
 │   ├── image-delivery.ts   # URL /_next/image a 1200px y calidad 70
 │   ├── auth-cookie.ts      # detecta sb-*-auth-token sin llamar a Auth
@@ -73,13 +75,13 @@ La documentación de producto está en `docs/PRODUCT/`. Esta página describe la
 | `app/page.tsx` | Portada: featured + journal + homes + patio + Havana + about |
 | `app/sitemap.ts` | Sitemap dinámico desde `listPublished*()` |
 | `app/feed.xml/route.ts` | RSS journal+properties |
-| `app/embed/[slug]/route.ts` | Embed terceros (resuelve property o post, 404 si no) |
+| `app/embed/[slug]/route.ts` | Embed terceros: property o post desde su lista, 404 si no |
 | `app/api/submissions/route.ts` | Ingesta validada (JPEG ≤8MB, allowlist, Storage) |
 | `app/contribuir/page.tsx` | Client Component: `fetch` + estados idle/sending/done/error |
 | `app/iniciar-sesion/page.tsx` | Client Component: enlace OTP para emails ya invitados |
 | `app/admin/review/page.tsx` | Moderación, invitaciones y gestión de miembros con Server Actions |
 | `app/admin/review/ModerationDecision.tsx` | Diálogo de confirmación antes de aprobar o rechazar |
-| `lib/site.ts` | Canónica: `NEXT_PUBLIC_SITE_URL` o `https://dwellhavana.com` |
+| `lib/site.ts` | Canónica: `NEXT_PUBLIC_SITE_URL` si es válida; si no, `https://dwellhavana.com` |
 | `lib/db.ts` | Dos clientes server-only: lecturas públicas con revalidate 3600, y servicio en `no-store` |
 | `lib/content.ts` | Misma forma que `data.ts` para no romper páginas |
 | `supabase/*.sql` | Referencias legibles. El orden formal está en `supabase/migrations/` |

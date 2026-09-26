@@ -1,10 +1,16 @@
 /**
  * URL canónica del sitio.
  * Configurar NEXT_PUBLIC_SITE_URL en producción (ej. https://dwellhavana.com).
+ * Un valor vacío, solo espacios o que no sea una URL http(s) absoluta
+ * usa el dominio por defecto: `new URL("")` rompe el build.
  */
-export const siteUrl = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://dwellhavana.com"
-).replace(/\/$/, "");
+import {
+  DEFAULT_SITE_URL,
+  resolveSiteUrl,
+  siteUrl,
+} from "./site-url.mjs";
+
+export { DEFAULT_SITE_URL, resolveSiteUrl, siteUrl };
 
 export const siteName = "Dwell Havana";
 
