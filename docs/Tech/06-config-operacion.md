@@ -16,6 +16,7 @@ Copiar `.env.example` → `.env.local` (gitignoreado, nunca commitear).
 | `SUPABASE_SERVICE_ROLE_KEY` | **No, solo server** | `lib/db.ts`, API submissions, admin e invitaciones |
 | `ADMIN_TOKEN` | **No, solo server** | `app/admin/review/page.tsx` (cookie `dh_admin`) |
 | `ADMIN_TOKEN_TTL_SECONDS` | **No, solo server** | Duración de la cookie fallback; default 7 días |
+| `SUPABASE_FETCH_TIMEOUT_MS` | No | Timeout opcional de las lecturas a Supabase, en milisegundos. Si falta o no es un número positivo, el default es 5000. No lo lee el cliente del navegador |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | Sí | `mailto` de `/about` y del footer. Si falta, `hola@dwellhavana.example` |
 
 > Nota: `docs/Idea/Fase-1-Cierre.md §4` cita `NEXT_PUBLIC_SUPABASE_ANON_KEY`; el `.env.example` actual usa `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (nuevo formato Supabase). Manda el `.env.example`.
@@ -101,6 +102,8 @@ npm run test:editorial-auth
 Si la petición no trae cookie `sb-<ref>-auth-token` (ni un trozo `.0`), el proxy no llama a Supabase Auth. Una visita anónima a una página pública no refresca sesión. Si la cookie existe, el refresco sigue en todas las rutas del matcher, incluidas las públicas.
 
 Las lecturas públicas usan `getPublishedContentClient()` (`lib/db.ts`): `fetch` con `next: { revalidate: 3600, tags: ["published-content"] }`. `getServiceClient()` sigue en `cache: "no-store"` para la cola y las mutaciones. Al aprobar, el panel llama a `updateTag("published-content")`.
+
+Esas lecturas, el cliente de servidor y el proxy abortan el fetch a los 5 s, o a `SUPABASE_FETCH_TIMEOUT_MS` si es un número positivo. Si una lectura pública agota el tiempo, `lib/content.ts` la trata como cualquier otro error y usa el dataset estático: la página no responde 500. La subida de una foto (`POST`/`PUT` a `/storage/v1/object/…`) espera 60 s. `signInWithOtp` en el navegador espera 20 s y no usa el timeout corto.
 
 ## Variables en Vercel
 

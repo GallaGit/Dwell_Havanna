@@ -1,4 +1,9 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import {
+  createFetchWithTimeout,
+  resolveSupabaseRequestTimeoutMs,
+  supabaseFetchTimeoutMs,
+} from "./fetch-with-timeout";
 
 /**
  * Server-side Supabase client (service_role).
@@ -13,8 +18,10 @@ let cached: SupabaseClient | null | undefined;
 
 /**
  * Cliente de lecturas públicas. La respuesta se revalida cada hora, igual
- * que el ISR de las páginas. El cliente de abajo (`getServiceClient`) sigue
- * en `no-store` para la cola de moderación y las mutaciones.
+ * que el ISR de las páginas, y el fetch se aborta si Supabase no responde
+ * (`SUPABASE_FETCH_TIMEOUT_MS`, default 5s). El cliente de abajo
+ * (`getServiceClient`) sigue en `no-store` para la cola de moderación y las
+ * mutaciones. La subida a Storage usa un timeout más largo.
  */
 let publishedCached: SupabaseClient | null | undefined;
 
@@ -32,7 +39,7 @@ export function getPublishedContentClient(): SupabaseClient | null {
     auth: { persistSession: false, autoRefreshToken: false },
     global: {
       fetch: (input, init) =>
-        fetch(input, {
+        createFetchWithTimeout(supabaseFetchTimeoutMs())(input, {
           ...init,
           next: { revalidate: 3600, tags: [PUBLISHED_CONTENT_TAG] },
         }),
@@ -55,7 +62,12 @@ export function getServiceClient(): SupabaseClient | null {
   cached = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: {
-      fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+      fetch: (input, init) => {
+        const nextInit = { ...init, cache: "no-store" as const };
+        return createFetchWithTimeout(
+          resolveSupabaseRequestTimeoutMs(input, nextInit, supabaseFetchTimeoutMs()),
+        )(input, nextInit);
+      },
     },
   });
   return cached;
