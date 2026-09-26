@@ -10,7 +10,7 @@ Copiar `.env.example` → `.env.local` (gitignoreado, nunca commitear).
 
 | Var | Expuesta al navegador | Dónde se usa |
 |---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | Sí | `lib/site.ts` (OG, sitemap, feed, embeds). También `redirectTo` de las invitaciones Auth. Si falta, el sitio canónico usa `https://dwellhavana.com` y las invitaciones usan `http://localhost:3000` |
+| `NEXT_PUBLIC_SITE_URL` | Sí | `lib/site.ts` (OG, sitemap, feed, embeds). También `redirectTo` de las invitaciones Auth. Si falta, está vacía o no es una URL `http(s)` válida, el sitio canónico usa `https://dwellhavana.com`. Las invitaciones usan `http://localhost:3000` solo cuando la variable no está definida |
 | `NEXT_PUBLIC_SUPABASE_URL` | Sí | `lib/db.ts` y el cliente Auth |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sí | Supabase Auth en el navegador y cookies SSR |
 | `SUPABASE_SERVICE_ROLE_KEY` | **No, solo server** | `lib/db.ts`, API submissions, admin e invitaciones |

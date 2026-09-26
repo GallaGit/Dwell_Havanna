@@ -15,7 +15,7 @@ Toda lectura pública pasa por `lib/content.ts`. Si hay Supabase configurado lee
 | `lib/db.ts` | `getPublishedContentClient()`, `getServiceClient()` | El primero usa `fetch` con `revalidate: 3600` y el tag `published-content`. El segundo sigue en `cache: "no-store"` para la cola y las mutaciones. Ambos devuelven `null` si faltan la URL o la service role. **Nunca importar desde cliente.** |
 | `lib/content.ts` | `listPublishedProperties()`, `getPropertyBySlug()`, `listPublishedPosts()`, `getPostBySlug()` | Envueltos en `cache()`. El slug consulta `.eq("slug")`. Si la query falla, cae a `lib/data.ts`. Si la query responde y no hay fila, devuelve `undefined`. El cuerpo del post es el placeholder de `lib/placeholders.ts`. |
 | `lib/data.ts` | `Property`, `JournalPost`, `properties[3]`, `journalPosts[4]` | Las URLs de foto salen de `lib/placeholders.ts`. |
-| `lib/site.ts` | `siteUrl`, `canonicalFor(path)` | `NEXT_PUBLIC_SITE_URL ?? "https://dwellhavana.com"`, trim `/` final. Usado en OG, sitemap, feed, embed. |
+| `lib/site.ts` | `siteUrl`, `canonicalFor(path)`, `resolveSiteUrl()` | `NEXT_PUBLIC_SITE_URL` si es una URL `http(s)` absoluta. Si falta, está vacía, es solo espacios o no es válida, `https://dwellhavana.com`. Se quitan las barras finales. Un valor inválido avisa en el build. Usado en OG, sitemap, feed, embed. |
 
 ## Schema (`supabase/01-schema.sql`)
 
