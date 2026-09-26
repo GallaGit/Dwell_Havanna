@@ -16,20 +16,24 @@ const LEGACY_COOKIE = "dh_admin";
 export async function getEditorialAccess(): Promise<EditorialAccess | null> {
   const supabase = await getSupabaseServerClient();
   if (supabase) {
-    const { data: authData } = await supabase.auth.getUser();
-    const user = authData.user;
-    const db = getServiceClient();
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData.user;
+      const db = getServiceClient();
 
-    if (user && db) {
-      const { data: member } = await db
-        .from("editorial_members")
-        .select("auth_user_id, role, active, display_name")
-        .eq("auth_user_id", user.id)
-        .eq("active", true)
-        .maybeSingle();
+      if (user && db) {
+        const { data: member } = await db
+          .from("editorial_members")
+          .select("auth_user_id, role, active, display_name")
+          .eq("auth_user_id", user.id)
+          .eq("active", true)
+          .maybeSingle();
 
-      const access = getActiveEditorialAccess(member);
-      if (access) return access;
+        const access = getActiveEditorialAccess(member);
+        if (access) return access;
+      }
+    } catch {
+      // Timeout u otro fallo de red: seguir con la cookie legacy si existe.
     }
   }
 
