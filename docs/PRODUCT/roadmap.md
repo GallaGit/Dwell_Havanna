@@ -272,6 +272,30 @@ Aplicar en el SQL Editor, en este orden. Los nombres son los archivos del reposi
 - [ ] Validar un slug de journal con Meta Sharing Debugger.
 - [ ] Revisar la carga de imágenes desde Supabase Storage.
 
+### Pruebas obligatorias antes de lanzar
+
+- [ ] **Prueba de subida de fotos en `/contribuir` (obligatoria).**
+
+  Contexto (hallazgo del 26-09-2026): en la primera publicación de prueba (post `community-33f1c1ee`, "5 esquinas") la foto se veía de baja calidad. Causa: el archivo subido era de 399×501 px y 44 KB, sin EXIF (probablemente descargado o ya reducido). La app no comprime al subir: `app/api/submissions/route.ts` guarda los bytes tal cual. La portada del post (`app/journal/[slug]/page.tsx`) usa un contenedor `aspect-[16/9]` casi a todo el ancho con `object-cover`, que amplía y recorta las fotos pequeñas o verticales. Además, Next recomprime a AVIF con `q=70` (`next.config.ts`, `qualities: [70]`).
+
+  Casos a probar. En cada uno, documentar el resultado y el error que ve el usuario:
+
+  1. JPEG de buena calidad (≥1600 px en el lado mayor, <4 MB): debe publicarse y verse nítido en la portada del post, en la home y en `/journal`.
+  2. JPEG de entre ~4,5 y 8 MB: la UI dice "máx. 8 MB", pero Vercel limita el cuerpo de la función a ~4,5 MB. Comprobar qué error aparece y si se entiende.
+  3. JPEG de más de 8 MB: comprobar el mensaje de validación.
+  4. Foto HEIC de iPhone y PNG: solo se acepta JPEG. Comprobar qué pasa.
+  5. JPEG pequeño (<1000 px): hoy se acepta sin aviso. Comprobar cómo se ve.
+  6. Foto vertical de alta resolución: comprobar el recorte en la portada 16:9.
+
+  Posibles soluciones a evaluar después de la prueba:
+
+  - Validar una resolución mínima (~1600 px) con un mensaje claro.
+  - Subir directamente a Supabase Storage con URL firmada (`createSignedUploadUrl`) para evitar el límite de 4,5 MB de Vercel, o redimensionar en el cliente a ~2560 px en JPEG con calidad ≈0,85.
+  - Mostrar la portada con la proporción real de la imagen en vez de forzar 16:9.
+  - Usar `qualities: [70, 85]` y `quality={85}` en la portada del post y en el destacado de la home.
+  - Aceptar HEIC y PNG convirtiéndolos a JPEG.
+  - Mostrar mensajes de error claros en cada caso.
+
 ## Paso 4: completar el contenido editorial
 
 - [ ] Reemplazar los textos, imágenes y datos de ejemplo por contenido real.
