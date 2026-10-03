@@ -28,4 +28,4 @@ scripts/apply-canonical-sql.sh
 
 ## Documentación
 
-La documentación canónica está en [`docs/README.md`](docs/README.md). El trabajo de código previo al despliegue está en [`docs/Tech/07-rendimiento.md`](docs/Tech/07-rendimiento.md) y en [`docs/PRODUCT/contenido-placeholder.md`](docs/PRODUCT/contenido-placeholder.md). Lo que queda fuera del repositorio es el Paso 2 de [`docs/PRODUCT/roadmap.md`](docs/PRODUCT/roadmap.md).
+La documentación canónica está en [`docs/README.md`](docs/README.md). El estado de Supabase al 2026-09-25 está en [`docs/Tech/08-estado-supabase-2026-09-25.md`](docs/Tech/08-estado-supabase-2026-09-25.md). Lighthouse local y los placeholders están en [`docs/Tech/07-rendimiento.md`](docs/Tech/07-rendimiento.md) y [`docs/PRODUCT/contenido-placeholder.md`](docs/PRODUCT/contenido-placeholder.md). Lo que queda para el lanzamiento es el Paso 2 de [`docs/PRODUCT/roadmap.md`](docs/PRODUCT/roadmap.md).

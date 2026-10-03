@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# Aplica el SQL canónico de Dwell Havana, en el orden de
-# docs/Tech/06-config-operacion.md y docs/PRODUCT/roadmap.md.
+# Aplica el SQL canónico de Dwell Havana en una base nueva, o en una base
+# que ya tiene verified_contributors.auth_user_id. El procedimiento y la
+# excepción del esquema anterior a 03 están en docs/Tech/06-config-operacion.md.
 #
 # Por defecto solo lista los archivos. No conecta a ninguna base.
 # No ejecutes esto contra producción desde un agente: el proyecto
 # sfujmwumtzuzwwhfmyxa está bloqueado salvo --allow-production.
+# Con --apply, cada archivo va en una transacción (psql --single-transaction
+# y ON_ERROR_STOP). Si una sentencia falla, ese archivo se revierte y el script para.
 #
 # Uso:
 #   scripts/apply-canonical-sql.sh
@@ -68,15 +71,23 @@ con su auth_user_id real:
 
 El seed (02-seed.sql) es contenido de ejemplo. Omítelo si no lo quieres.
 
+Este orden vale cuando la base es nueva o cuando auth_user_id ya existe.
+Si verified_contributors existe y todavía no tiene auth_user_id, para y
+ejecuta 03-contributor-auth.sql antes de 01-schema.sql. Si no, el índice
+verified_contributors_auth_user_idx falla. Producción se migró así el
+2026-09-25. Desde el 2026-10-03 el proyecto está pausado.
+
 La migración 20261003150500 deja dwell-media privado aunque ya existiera
 como público, y crea el bucket público dwell-published. No mueve archivos.
-En un proyecto que ya aplicó el SQL anterior basta con ese archivo; no
-reapliques 01-schema.sql si no hace falta. Después, en dry-run:
+Producción (sfujmwumtzuzwwhfmyxa) y testing (ypeizxnafipvojpntsaw) están
+pausados desde el 2026-10-03. Al reactivar producción no reapliques
+01-schema.sql: ejecuta solo esa migración. Después, en dry-run:
 
   node --experimental-strip-types scripts/migrate-dwell-media-objects.mjs
 
 Con --apply copia las fotos aprobadas a dwell-published (sin EXIF), mueve
 los pendientes a submissions/<uuid>.jpg y borra los rechazados.
+El ref de producción exige --allow-production.
 EOF
 
 if [[ "$APPLY" -eq 0 ]]; then
@@ -103,7 +114,7 @@ fi
 
 for file in "${FILES[@]}"; do
   echo "Aplicando $file"
-  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$ROOT/$file"
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction -f "$ROOT/$file"
 done
 
 echo "SQL aplicado. Falta el alta manual del owner, si aún no existe."

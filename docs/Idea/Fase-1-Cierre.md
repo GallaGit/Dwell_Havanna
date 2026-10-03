@@ -5,7 +5,7 @@ Commits en `GallaGit/Dwell_Havanna` rama `main`:
 - `9c7d391` fundación (schema, seed, capa de contenido con fallback)
 - `a6fdcbb` cierre (este documento describe ese commit)
 
-Pendiente NO técnico: restaurar el proyecto Supabase de producción (el del 2026-09-15 ya no resuelve) y aplicar los SQL (ver §6 y `docs/PRODUCT/roadmap.md`, Paso 2).
+El proyecto de producción `sfujmwumtzuzwwhfmyxa` aplicó el SQL editorial el 2026-09-25 (ver §6 y `docs/Tech/08-estado-supabase-2026-09-25.md`). Desde el 2026-10-03 está pausado, igual que testing. La web pública es `https://dwell-havanna.vercel.app`. Sigue pendiente reactivar la base con el bucket privado, la cuenta `owner` de Ociel, el dominio `dwellhavana.com` y las imágenes (`docs/PRODUCT/roadmap.md`, Paso 2).
 Sin DB configurada el sitio funciona igual (fallback estático de `lib/data.ts`).
 
 ## 1. Qué se construyó
@@ -55,17 +55,11 @@ Si el insert falla tras subir, borra el archivo huérfano (best-effort).
 
 ## 6. Qué falta para activar (lado humano)
 
-Hosting, dominio (`dwellhavana.com`, renovación antes del 2026-10-06), DNS apex y `www`, Site URL y allowlist están en `docs/PRODUCT/roadmap.md`, Paso 2. El orden SQL es el mismo que en `docs/Tech/06-config-operacion.md`:
+Hosting, dominio (`dwellhavana.com`, renovación antes del 2026-10-06), DNS apex y `www`, Site URL y allowlist están en `docs/PRODUCT/roadmap.md`, Paso 2. El orden SQL vigente está en `docs/Tech/06-config-operacion.md`.
 
-1. `supabase/01-schema.sql`
-2. `supabase/03-contributor-auth.sql`
-3. `supabase/04-editorial-permissions.sql`
-4. `supabase/migrations/20260921000300_editorial_member_management.sql`
-5. `supabase/migrations/20261003150500_private_dwell_media.sql`
-6. `supabase/02-seed.sql`, solo si se quiere el contenido de ejemplo
-7. Alta del primer `owner` en `editorial_members` con su `auth_user_id`
+En una base nueva, `01-schema.sql` va primero. En el esquema anterior a `03` (`verified_contributors` sin `auth_user_id`), `03-contributor-auth.sql` va antes de `01-schema.sql`. Producción se migró el 2026-09-25 20:25–20:26 CEST con ese segundo orden. El seed del 2026-09-15 se conservó (3 properties y 4 journal posts). Los 2 colaboradores de prueba se borraron. El registro está en `docs/Tech/08-estado-supabase-2026-09-25.md` y en `supabase/prod-applied/2026-09-25/`.
 
-El 2026-09-15 este proyecto ya tenía `01-schema`, `02-seed`, colaboradores y el bucket `dwell-media` (§8). Hoy no resuelve. Esas cuatro piezas quedan a re-verificar.
+El orden de una base nueva, ya con el bucket privado, está en `docs/Tech/06-config-operacion.md`. Producción no lo repite: está pausada desde el 2026-10-03 y, al reactivarla, solo se aplica `supabase/migrations/20261003150500_private_dwell_media.sql` y `scripts/migrate-dwell-media-objects.mjs`. Falta invitar la cuenta de Ociel en Auth y después insertar el `owner`.
 
 Después: dar de alta colaboradores (`insert into verified_contributors ...`), invitar el email desde `/admin/review` (no hay registro público), probar `/contribuir` → aprobar → `journal_posts.status='published'`, fijar `NEXT_PUBLIC_SITE_URL` y la allowlist `https://<dominio>/auth/callback`, y validar feed, sitemap y un slug en el Sharing Debugger.
 
@@ -80,3 +74,5 @@ Después: dar de alta colaboradores (`insert into verified_contributors ...`), i
 5. **Lectura DB en vivo**: marcador publicado aparece en `/properties`; `/feed.xml` 8 items; `/sitemap.xml` con slugs; OG tags correctos por slug. ✅
 6. **Limpieza**: borrados marcador, envío, borrador y archivo del bucket. DB = seed original, bucket vacío, `pending` vacío. ✅
 Notas de entorno local: la red intercepta TLS y Node falla con `UNABLE_TO_VERIFY_LEAF_SIGNATURE` (curl sí valida con el almacén de Windows); las pruebas usaron `NODE_TLS_REJECT_UNAUTHORIZED=0` **solo en el proceso de test**, nada commiteado. En producción no aplica.
+
+Esta sección describe la prueba del 2026-09-15 y la limpieza de aquel día. El 2026-09-25 el mismo proyecto seguía activo, conservaba el seed, ya no tenía los colaboradores de prueba y tenía las siete tablas del esquema editorial. Ese estado está en `docs/Tech/08-estado-supabase-2026-09-25.md`. Desde el 2026-10-03 el proyecto está pausado. El paso 4 de arriba insertó el borrador de comunidad con `status='review'`; el código actual, tras la confirmación del panel, inserta `status='published'`.

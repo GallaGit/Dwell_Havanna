@@ -16,7 +16,7 @@ Decisiones aprobadas por el usuario (2026-09-15):
 
 ## 1. Estado actual (punto de partida real)
 
-- App en la raíz del repositorio: Next 16.3.5 + React 19 + Tailwind 4. Rutas: `/`, `/properties`, `/properties/[slug]`, `/journal`, `/journal/[slug]`, `/about`.
+- App en la raíz del repositorio: Next 16.3.8 + React 19 + Tailwind 4. Rutas: `/`, `/properties`, `/properties/[slug]`, `/journal`, `/journal/[slug]`, `/about`.
 - Contenido estático en `lib/data.ts`: tipos `Property` y `JournalPost`, arrays `properties` (3), `journalPosts` (4), helpers `getProperty`, `getPost`. Imágenes vía helper `img()` a `images.unsplash.com`.
 - Render: `app/page.tsx` (portada revista), `components/Editorial.tsx` (`SectionHeading`, `PropertyEntry`, `JournalEntry`), detalles con `generateStaticParams()`.
 - `next.config.ts`: `images.remotePatterns` solo permite `images.unsplash.com` y `picsum.photos`. Habrá que añadir el futuro Storage (Supabase) + CDN de Meta.

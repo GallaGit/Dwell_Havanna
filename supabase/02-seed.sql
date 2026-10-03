@@ -1,5 +1,6 @@
--- Dwell Havana — Fase 1: seed migrado desde site/lib/data.ts (2026-09-15)
+-- Dwell Havana — Fase 1: seed migrado desde lib/data.ts (2026-09-15)
 -- Aplicar DESPUÉS de 01-schema.sql. Idempotente (on conflict do update).
+-- Contenido de ejemplo. Producción ya lo tiene desde el 2026-09-15.
 
 -- ── Properties ──
 insert into properties

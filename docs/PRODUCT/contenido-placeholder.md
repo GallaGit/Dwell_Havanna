@@ -1,6 +1,6 @@
 # Sustituir el contenido de ejemplo
 
-El sitio sale con fotos, textos y un email de prueba. Están marcados como PLACEHOLDER. No son el material definitivo de la revista.
+El sitio sale con fotos, textos y un email de prueba. Están marcados como PLACEHOLDER. No son el material definitivo de la revista. Sustituirlos bloquea el lanzamiento. Las imágenes reales quedan a cargo de Ociel, junto con el resto del Paso 2 en `docs/PRODUCT/roadmap.md`.
 
 ## Dónde está
 

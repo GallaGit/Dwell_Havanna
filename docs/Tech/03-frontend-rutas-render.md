@@ -6,7 +6,7 @@ Los flujos editoriales y las decisiones de permisos están en `docs/PRODUCT/05-f
 
 ## Tabla de rutas
 
-`npm run build` (Next.js 16.3.5, 2026-09-25, con `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` de ejemplo) prerenderiza el contenido público. Cada slug SSG cuenta. No cuentan `/_not-found` ni las etiquetas de grupo. La cifra anterior de 19 paths es de antes de iconos, `robots.txt`, manifiesto y los slugs de `/embed`.
+`npm run build` (Next.js 16.3.8, con `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` de ejemplo) prerenderiza el contenido público. Cada slug SSG cuenta. No cuentan `/_not-found` ni las etiquetas de grupo. La cifra anterior de 19 paths es de antes de iconos, `robots.txt`, manifiesto y los slugs de `/embed`.
 
 | Ruta | Archivo | Tipo / render |
 |---|---|---|

@@ -63,11 +63,12 @@ La documentación de producto está en `docs/PRODUCT/`. Esta página describe la
 │   ├── supabase-server.ts  # cliente Auth en el servidor
 │   └── supabase-browser.ts # cliente Auth en el navegador
 └── supabase/
-    ├── 01-schema.sql       # 5 tablas + RLS + buckets dwell-media y dwell-published
-    ├── 02-seed.sql         # seed idempotente desde data.ts
+    ├── 01-schema.sql       # 5 tablas + RLS; dwell-media privado y dwell-published público
+    ├── 02-seed.sql         # seed idempotente desde lib/data.ts
     ├── 03-contributor-auth.sql
-    ├── 04-editorial-permissions.sql
-    └── migrations/         # …00100, …00200, …00300 y 20261003150500 (bucket privado)
+    ├── 04-editorial-permissions.sql  # editorial_members + moderation_events
+    ├── migrations/         # …00100, …00200, …00300 y 20261003150500; sin esquema base
+    └── prod-applied/2026-09-25/  # registro histórico del SQL del 2026-09-25; el CLI no lo lee
 ```
 
 ## Rol por archivo clave
@@ -87,4 +88,5 @@ La documentación de producto está en `docs/PRODUCT/`. Esta página describe la
 | `lib/site.ts` | Canónica: `NEXT_PUBLIC_SITE_URL` o `https://dwellhavana.com` |
 | `lib/db.ts` | Dos clientes server-only: lecturas públicas con revalidate 3600, y servicio en `no-store` |
 | `lib/content.ts` | Misma forma que `data.ts` para no romper páginas |
-| `supabase/*.sql` | Referencias legibles. El orden formal está en `supabase/migrations/` |
+| `supabase/*.sql` | SQL canónico legible. El orden de aplicación está en `docs/Tech/06-config-operacion.md`. `migrations/` no incluye el esquema base |
+| `supabase/prod-applied/2026-09-25/` | Copia de lo ejecutado en producción el 2026-09-25. No es una migración del CLI |

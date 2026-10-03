@@ -12,4 +12,4 @@ Con un servidor de desarrollo fresco, el envío respondió `200`. La prueba del 
 
 La nota duplicada `Bloqueos-2020.09.15.md` se eliminó. Era el mismo texto con el año mal escrito.
 
-Ese proyecto de producción ahora no resuelve. Volver a comprobarlo es parte del Paso 2 en `docs/PRODUCT/roadmap.md`, no un bloqueo de código.
+El 2026-09-25 el proyecto `sfujmwumtzuzwwhfmyxa` tenía el esquema editorial aplicado. Desde el 2026-10-03 está pausado. El estado está en `docs/Tech/08-estado-supabase-2026-09-25.md`. Lo que queda del Paso 2 en `docs/PRODUCT/roadmap.md` es reactivarlo con el bucket privado, no este bloqueo.

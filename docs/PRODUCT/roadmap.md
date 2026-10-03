@@ -1,6 +1,6 @@
 # Dwell Havana roadmap
 
-Estado actualizado: 2026-09-25
+Estado actualizado: 2026-10-03
 
 Este documento reúne el trabajo hecho, los pasos de activación y las fases siguientes. Las casillas marcadas reflejan el estado documentado en `docs/Idea/Fase-1-Cierre.md` y en `docs/Tech/`.
 
@@ -15,7 +15,7 @@ Este documento reúne el trabajo hecho, los pasos de activación y las fases sig
 
 ### Base del proyecto
 
-- [x] Crear la aplicación con Next.js `16.3.5`, React `19.2.8`, TypeScript y Tailwind CSS v4.
+- [x] Crear la aplicación con Next.js `16.3.8`, React `19.2.8`, TypeScript y Tailwind CSS v4.
 - [x] Configurar App Router, TypeScript estricto, ESLint y alias `@/*`.
 - [x] Crear el layout editorial con Fraunces e Inter.
 - [x] Definir tokens visuales en `app/globals.css`.
@@ -109,7 +109,7 @@ Las optimizaciones de imagen ya están en `main` desde el PR #2 (`c100222`, `per
 
 ## Evolución de permisos editoriales
 
-Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. En testing ya hay un `owner` activo. `ADMIN_TOKEN` queda como fallback temporal hasta verificar ese acceso individual en producción.
+Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. El 2026-09-25 testing tenía dos `owner` activos y producción tenía el esquema sin filas en `editorial_members`. Los dos proyectos están pausados desde el 2026-10-03. `ADMIN_TOKEN` sigue como acceso de emergencia. Retirarlo es DH-SEC-002 y está pendiente. En Vercel, `ADMIN_TOKEN_TTL_SECONDS=3600`.
 
 ### Modelo decidido y base implementada
 
@@ -170,7 +170,7 @@ Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. En testing ya hay 
    - [x] Cubrir `owner`, `moderator`, miembro inactivo y el fallback temporal en `tests/editorial-permissions.test.mjs`.
    - [ ] Probar en navegador la revocación de una cuenta que ya tenía sesión.
    - [ ] Probar en navegador la auditoría de aprobaciones y rechazos.
-   - [ ] Retirar `ADMIN_TOKEN` cuando el acceso `owner` individual esté verificado en producción.
+   - [ ] Retirar `ADMIN_TOKEN` (DH-SEC-002) cuando el acceso `owner` individual esté verificado en producción. Hasta entonces sigue como acceso de emergencia, con `ADMIN_TOKEN_TTL_SECONDS=3600`.
 
 ### Correcciones y retiro solicitados por contribuidores
 
@@ -196,7 +196,7 @@ Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. En testing ya hay 
 
 ## Preparación de producción en el código
 
-Hecho en el repositorio el 2026-09-25. No despliega ni toca Supabase.
+Hecho en el repositorio el 2026-09-25, en el PR #9. Esta lista es el código. El SQL de las bases se aplicó el mismo día y está en el Paso 2.
 
 - [x] Corregir el open redirect de `/iniciar-sesion` (`lib/safe-redirect.ts`). Viene del PR #8.
 - [x] Añadir `npm run build` a CI. Viene del PR #8.
@@ -209,36 +209,76 @@ Hecho en el repositorio el 2026-09-25. No despliega ni toca Supabase.
 - [x] Añadir `metadataBase`, Open Graph por defecto, `app/robots.ts`, manifiesto e iconos provisionales.
 - [x] Centralizar fotos, párrafos y email de prueba en `lib/placeholders.ts`. El email real es `NEXT_PUBLIC_CONTACT_EMAIL`.
 - [x] Documentar el SQL canónico en `scripts/apply-canonical-sql.sh` (dry-run por defecto).
-- [x] Medir Lighthouse local contra `next start`. Resultados en `docs/Tech/07-rendimiento.md`.
+- [x] Medir Lighthouse local contra `next start`. En móvil, rendimiento 93–98 y accesibilidad 100. Tabla en `docs/Tech/07-rendimiento.md`.
 - [x] Hacer funcional el filtro de temas de `/journal` (`app/journal/JournalIndex.tsx`). Antes los chips no filtraban.
+
+El PR #9 (`6f0e354`) ya está en `main` y sustituye al #8, cerrado sin fusionar. El PR #14 (`14b86c1`) también está en `main`.
+
+## Auditoría del 2026-09-30
+
+Los hallazgos prioritarios quedaron cerrados en el PR #14, ya en `main`:
+
+- [x] DH-SEC-001. `dwell-media` privado, URL firmada en el panel, copia aprobada en `dwell-published` y borrado al rechazar.
+- [x] DH-SEC-003. Reinvitar un handle ya vinculado no pisa `auth_user_id`.
+- [x] DH-SEC-004, el tamaño. JPEG de hasta 4 MB y cuerpo de hasta 4,5 MB.
+- [x] DH-SEC-005. El JPEG se guarda sin EXIF.
+- [x] DH-SEC-006. Next.js `16.3.8`.
+- [x] El navegador reduce PNG, WebP, HEIC (si lo decodifica) y las fotos grandes a un JPEG de lado largo ≤ 2560 px y de menos de 4 MB. Un JPEG que ya cumple eso se envía tal cual.
+
+Pendiente:
+
+- [ ] DH-SEC-002. Retirar `ADMIN_TOKEN`. Sigue como acceso de emergencia. En Vercel, `ADMIN_TOKEN_TTL_SECONDS=3600`.
+- [ ] Rate limit de envíos (el resto de DH-SEC-004).
+- [ ] Hallazgos bajos: `server-only` en `lib/db.ts` (DH-SEC-007), CSP/HSTS/COOP (008), hostname fijo en `remotePatterns` (009), mensaje uniforme del magic link (010), `signOut` (011), desactivar el signup en el dashboard (012), `REVOKE` / `FORCE RLS` (013), rotar la service role al reactivar (014) y `npm audit` en CI.
+- [ ] Reactivar producción y aplicar el bucket privado. El procedimiento está en el Paso 2.
 
 ## Paso 2: activar Supabase y producción
 
-Requiere credenciales y acciones de la dueña, fuera del repositorio. El código está preparado para Vercel. No hay proyecto de hosting creado.
+La web pública es `https://dwell-havanna.vercel.app`. `NEXT_PUBLIC_SITE_URL` ya está configurada así en Vercel. `dwellhavana.com` es el dominio siguiente, con correo por Resend, y todavía no está conectado. El registro del esquema al 2026-09-25 está en `docs/Tech/08-estado-supabase-2026-09-25.md`. El procedimiento de reactivación está en `docs/Tech/06-config-operacion.md`.
 
-Este paso activa producción. Las migraciones editoriales ya están en el repositorio y en testing. En producción se aplican con el orden SQL de abajo, antes de retirar `ADMIN_TOKEN`. El script `scripts/apply-canonical-sql.sh` lista ese orden y, con `--apply`, lo ejecuta si hay `DATABASE_URL` y `psql`. El ref `sfujmwumtzuzwwhfmyxa` queda bloqueado salvo `--allow-production`.
+Producción (`sfujmwumtzuzwwhfmyxa`, Dwell_Havanna_DB) y testing (`ypeizxnafipvojpntsaw`) están pausados desde el 2026-10-03. Al reactivar producción no reapliques el SQL del 2026-09-25. Aplica solo `supabase/migrations/20261003150500_private_dwell_media.sql` y después `scripts/migrate-dwell-media-objects.mjs`.
 
-El 2026-09-15 el proyecto de producción (`sfujmwumtzuzwwhfmyxa`, `docs/Idea/Fase-1-Cierre.md` §8) ya tenía `supabase/01-schema.sql`, `supabase/02-seed.sql`, colaboradores en `verified_contributors` y el bucket `dwell-media`. Ese proyecto ahora no resuelve (probable pausa o borrado). Esas cuatro piezas quedan **a re-verificar**, no como hechas.
+`scripts/apply-canonical-sql.sh` lista el orden de una base nueva. Con `--apply`, cada archivo va en una transacción. El ref `sfujmwumtzuzwwhfmyxa` queda bloqueado salvo `--allow-production`.
 
-### Hosting, dominio y variables
+### Hecho el 2026-09-25, antes de la pausa
 
-- [ ] Crear el proyecto en Vercel (el hosting previsto) y conectar este repositorio.
-- [ ] Renovar el dominio `dwellhavana.com` antes del 2026-10-06.
-- [ ] Apuntar el DNS del apex y de `www` al hosting.
-- [ ] Restaurar o recrear el proyecto Supabase de producción y aplicar las migraciones en el orden de abajo.
-- [ ] En Supabase Auth, fijar la Site URL `https://dwellhavana.com` y la allowlist `https://dwellhavana.com/auth/callback`. Si el sitio también responde en `www`, permitir ese host.
+- [x] Proyecto `sfujmwumtzuzwwhfmyxa` (Dwell_Havanna_DB, organización `oxfilxdghpzkqyvtjkiy`, `ca-central-1`) activo aquel día. Pausado desde el 2026-10-03.
+- [x] Aplicar el esquema editorial. El orden usado fue el del esquema anterior a `03`: primero `03-contributor-auth.sql`, después `01-schema.sql`. Versiones y archivos en `supabase/prod-applied/2026-09-25/`.
+- [x] Conservar el seed del 2026-09-15: 3 `properties` y 4 `journal_posts`, publicadas.
+- [x] Borrar los 2 colaboradores de prueba. `verified_contributors` quedó en 0 filas.
+- [x] Aquel día el bucket `dwell-media` quedó público, con la policy `dwell-media public read`, y 0 objetos. Ese no es el estado deseado. El PR #14 lo sustituye.
+- [x] Quitar `EXECUTE` de `anon`, `authenticated` y `public` sobre `public.rls_auto_enable()`.
+
+Aquel día: siete tablas, RLS activo y 0 policies. Cero usuarios Auth. Cero filas en `editorial_members`.
+
+### Reactivar producción
+
+- [ ] Reactivar `sfujmwumtzuzwwhfmyxa`. Testing (`ypeizxnafipvojpntsaw`) también está pausado.
+- [ ] Ejecutar solo `supabase/migrations/20261003150500_private_dwell_media.sql`. Deja `dwell-media` privado y crea `dwell-published`. No reapliques `01-schema.sql`.
+- [ ] Migrar los objetos con `scripts/migrate-dwell-media-objects.mjs` (primero sin `--apply`). Las aprobadas pasan a `dwell-published/<uuid>.jpg`; las pendientes pierden el handle de la ruta; las rechazadas se borran.
+- [ ] Invitar la cuenta de Ociel en Supabase Auth. Después, insertar su fila `owner` en `editorial_members`. La columna es clave foránea a `auth.users`.
+- [ ] Activar en el dashboard de Auth la protección de contraseñas filtradas.
+- [ ] Rotar la service role al reactivar (DH-SEC-014).
+
+### Hosting, dominio y medición
+
+- [x] Crear el proyecto en Vercel y publicar `https://dwell-havanna.vercel.app`.
+- [x] Configurar `NEXT_PUBLIC_SITE_URL` con esa URL.
+- [ ] Renovar `dwellhavana.com` antes del 2026-10-06. El correo irá por Resend cuando el dominio esté conectado. Todavía no lo está.
+- [ ] Apuntar el DNS del apex y de `www` al hosting cuando se use ese dominio.
+- [ ] En Supabase Auth, fijar la Site URL a la URL pública vigente y la allowlist de `/auth/callback`. Hoy es `https://dwell-havanna.vercel.app`. Cuando entre `dwellhavana.com`, cambia las dos.
 - [ ] Configurar las plantillas Invite user y Magic Link con `token_hash` y `type`, como en `docs/Tech/06-config-operacion.md`.
-- [ ] Configurar en Vercel `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_TOKEN` y, cuando exista el buzón, `NEXT_PUBLIC_CONTACT_EMAIL`.
-- [ ] Desplegar la aplicación.
+- [ ] Confirmar en Vercel `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` y `ADMIN_TOKEN` contra el proyecto reactivado. `ADMIN_TOKEN_TTL_SECONDS=3600`.
 - [ ] Confirmar que ninguna variable secreta se expone al navegador.
-- [ ] Ejecutar Lighthouse contra el dominio de producción. Objetivo: Performance ≥ 90 y Accesibilidad ≥ 95 en móvil (`docs/Tech/07-rendimiento.md`).
+- [ ] Ejecutar Lighthouse contra `https://dwell-havanna.vercel.app`. Objetivo: Performance ≥ 90 y Accesibilidad ≥ 95 en móvil (`docs/Tech/07-rendimiento.md`).
 - [ ] Sustituir imágenes, textos e iconos provisionales (`docs/PRODUCT/contenido-placeholder.md`).
+- [ ] Invitar colaboradores mediante `/admin/review` y comprobar el vínculo Auth ↔ `verified_contributors`.
 
 La plantilla de los emails de invitación y de magic link está en `docs/Tech/06-config-operacion.md`.
 
-### Orden SQL canónico
+### Orden SQL de una base nueva
 
-Aplicar en el SQL Editor, en este orden. Los nombres son los archivos del repositorio. El mismo orden está en `docs/Tech/06-config-operacion.md` y en `docs/Idea/Fase-1-Cierre.md` §6.
+No uses esta lista para reactivar producción. Ahí solo va la migración del bucket privado, como arriba.
 
 1. `supabase/01-schema.sql`
 2. `supabase/03-contributor-auth.sql`
@@ -248,19 +288,7 @@ Aplicar en el SQL Editor, en este orden. Los nombres son los archivos del reposi
 6. `supabase/02-seed.sql`, solo si se quiere el contenido de ejemplo
 7. Alta del primer `owner` en `editorial_members` con su `auth_user_id`
 
-En un proyecto que ya aplicó el SQL viejo, ejecuta solo el paso 5 y después `scripts/migrate-dwell-media-objects.mjs`. El detalle, incluido cómo cambian las rutas de las fotos ya aprobadas, está en `docs/Tech/06-config-operacion.md`, sección «Reactivar producción con el bucket privado». No hay variables nuevas.
-
-- [ ] Confirmar el proyecto Supabase de producción. A re-verificar: el proyecto del 2026-09-15 no resuelve.
-- [ ] Ejecutar `supabase/01-schema.sql`. A re-verificar: el 2026-09-15 ya estaba aplicado.
-- [ ] Ejecutar `supabase/03-contributor-auth.sql`.
-- [ ] Ejecutar `supabase/04-editorial-permissions.sql`.
-- [ ] Ejecutar `supabase/migrations/20260921000300_editorial_member_management.sql`.
-- [ ] Ejecutar `supabase/migrations/20261003150500_private_dwell_media.sql`. Deja `dwell-media` privado aunque el `INSERT` antiguo no cambiara el flag, y crea `dwell-published`.
-- [ ] Ejecutar `supabase/02-seed.sql` solo si se quiere el seed. A re-verificar: el 2026-09-15 ya estaba aplicado.
-- [ ] Registrar colaboradores en `verified_contributors`. A re-verificar: el 2026-09-15 ya había colaboradores.
-- [ ] Migrar los objetos con `scripts/migrate-dwell-media-objects.mjs` (primero sin `--apply`). Las aprobadas pasan a `dwell-published/<uuid>.jpg`; las pendientes pierden el handle de la ruta; las rechazadas se borran.
-- [ ] Dar de alta el primer `owner` en `editorial_members` con su `auth_user_id`.
-- [ ] Invitar colaboradores mediante `/admin/review` y comprobar el vínculo Auth ↔ `verified_contributors`.
+Si `verified_contributors` ya existe sin `auth_user_id`, `03-contributor-auth.sql` va antes de `01-schema.sql`. Producción se migró así el 2026-09-25. El detalle está en `docs/Tech/06-config-operacion.md`.
 
 ## Paso 3: repetir el E2E en producción
 
@@ -353,22 +381,21 @@ Controles que el código y el esquema ya aplican. La evidencia está en el repos
 - [x] Validación de derechos de imagen. `POST /api/submissions` exige `rights` y guarda `rights_granted`. `tests/submissions-validation.test.mjs` cubre el rechazo `rights_required`.
 - [x] Lista de colaboradores verificados. El envío exige sesión y un `verified_contributors.auth_user_id` vinculado al handle. Un handle ajeno o desconocido responde `403 unknown_contributor` (`docs/Idea/Fase-1-Cierre.md` §2).
 - [x] `SUPABASE_SERVICE_ROLE_KEY` no llega al navegador. Solo la leen módulos de servidor (`lib/db.ts`). No usa el prefijo `NEXT_PUBLIC_`.
-- [x] `ADMIN_TOKEN` no llega al navegador. La cookie `dh_admin` es httpOnly y el secreto se compara en el servidor (`lib/editorial-auth.ts`). Sigue como fallback temporal.
+- [x] `ADMIN_TOKEN` no llega al navegador. La cookie `dh_admin` es httpOnly y el secreto se compara en el servidor (`lib/editorial-auth.ts`). Sigue como acceso de emergencia (DH-SEC-002 pendiente), con `ADMIN_TOKEN_TTL_SECONDS=3600` en Vercel.
 - [x] No hay publicación automática. Aprobar en `/admin/review` pide confirmación y solo entonces inserta `journal_posts` con `status='published'`.
 - [x] La web es la URL canónica. `lib/site.ts` expone `siteUrl` y `canonicalFor`.
 - [ ] Evitar URLs firmadas que Meta no pueda leer cuando exista la publicación en redes (Paso 7).
 
 ## Estado de validación local y de testing
 
-- `npm run lint`, `npm test` y `npm run build` pasan en la revisión del 2026-09-25. La build no necesita secretos reales de Supabase. Con URL y service role de ejemplo, `/` sigue en ISR de una hora.
-- `npm test` pasa 17 pruebas y omite 1 E2E HTTP porque no hay variables `E2E_*`.
+- `npm run lint`, `npm test` y `npm run build` pasan en la revisión del PR #14. La build no necesita secretos reales de Supabase. Con URL y service role de ejemplo, `/` sigue en ISR de una hora.
+- `npm test` pasa 32 pruebas y omite 1 E2E HTTP porque no hay variables `E2E_*`.
 - La tabla de rutas vigente está en `docs/Tech/03-frontend-rutas-render.md`. La cifra 19 es anterior a iconos, `robots.txt`, manifiesto y los slugs prerenderizados de `/embed`.
 - Lighthouse local (móvil y escritorio, `next start`) está en `docs/Tech/07-rendimiento.md`.
 - El E2E, cuando se configura, valida autenticación requerida, derechos obligatorios, colaborador desconocido, submission válida, persistencia y limpieza.
 - RLS no devuelve filas a la clave publishable para `editorial_members`, `moderation_events` ni `verified_contributors`.
-- Testing tiene aplicadas `20260921000100_contributor_auth.sql`, `20260921000200_editorial_permissions.sql` y `20260921000300_editorial_member_management.sql`.
-- Testing tiene un `owner` activo en `editorial_members`, distinto del colaborador E2E. Ese colaborador no se promueve a `owner`.
-- Producción no tiene aplicadas estas migraciones editoriales.
+- El 2026-09-25, testing tenía aplicadas `20260921000100`, `20260921000200`, `20260921000300` y `canonical_01_schema` (`20260925174404`). Había dos `owner` activos, 3 usuarios Auth, 2 colaboradores vinculados, 2 submissions, 3 `moderation_events` y un post de comunidad en `review`. El recuento está en `docs/Tech/08-estado-supabase-2026-09-25.md`. El proyecto está pausado desde el 2026-10-03.
+- El 2026-09-25, producción tenía el esquema editorial, el seed (3 properties y 4 posts) y cero colaboradores, cero miembros editoriales y cero usuarios Auth. Está pausada desde el 2026-10-03. Falta aplicar el bucket privado.
 - Falta la prueba de navegador del flujo completo de aprobación, publicación y rechazo.
 
 Para otra cuenta editorial, invítala desde el panel o inserta su UUID:

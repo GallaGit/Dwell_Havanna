@@ -1,39 +1,31 @@
-# Handoff — 25 de septiembre de 2026
+# Handoff — 3 de octubre de 2026
 
-## Rama
+La documentación canónica está en `docs/`. Este archivo solo señala el estado al cierre del día.
 
-El trabajo de producción está en `cursor/prod-ready-a1d1`. Sustituye al PR #8 (`cursor/prod-paso-2-prep-a275`). No se ha hecho merge. `main` sigue en `62d4225` (`merge: editorial permissions model`).
+## Código
 
-## Siguiente
+`main` incluye el PR #9 (`6f0e354`) y el PR #14 (`14b86c1`). El #14 deja `dwell-media` privado, publica la copia aprobada en `dwell-published`, quita el EXIF, corta la foto en 4 MB y reduce en el navegador. Next.js está en `16.3.8`.
 
-Paso 2 de `docs/PRODUCT/roadmap.md`: la dueña activa producción. El código ya está preparado para Vercel. No hay proyecto de hosting ni proyecto Supabase de producción operativo.
+## Supabase
 
-Bloqueos de ese paso:
+Producción `sfujmwumtzuzwwhfmyxa` (Dwell_Havanna_DB) y testing `ypeizxnafipvojpntsaw` están pausados desde el 2026-10-03. El 2026-09-25 producción tenía el esquema editorial, el seed y cero miembros. Testing tenía dos `owner` activos. Esa lectura está en `docs/Tech/08-estado-supabase-2026-09-25.md`.
 
-- Renovar `dwellhavana.com` antes del 2026-10-06 y configurar el DNS del apex y de `www`.
-- Restaurar o recrear el proyecto Supabase de producción (`Dwell_Havanna_DB`, `sfujmwumtzuzwwhfmyxa`). El 2026-09-15 tenía esquema, seed, colaboradores y el bucket `dwell-media` (`docs/Idea/Fase-1-Cierre.md` §8). Ahora no resuelve. El orden SQL está en `scripts/apply-canonical-sql.sh` (dry-run por defecto; el ref de producción exige `--allow-production`).
-- Crear el proyecto en Vercel, configurar las variables de `.env.example`, la Site URL, la allowlist `https://dwellhavana.com/auth/callback` y las plantillas de email con `token_hash`.
-- Desplegar, medir Lighthouse en el dominio y sustituir el contenido PLACEHOLDER (`docs/PRODUCT/contenido-placeholder.md`).
+Al reactivar producción se aplica solo `supabase/migrations/20261003150500_private_dwell_media.sql` y `scripts/migrate-dwell-media-objects.mjs`. El procedimiento está en `docs/Tech/06-config-operacion.md`.
 
-## Qué quedó en código
+## Web y acceso
 
-- Las páginas públicas se prerenderizan (estáticas o ISR de una hora), también si existe `SUPABASE_SERVICE_ROLE_KEY`. La portada no llama a `cookies()`.
-- `proxy.ts` no consulta Supabase Auth si la petición no trae cookie `sb-*-auth-token`. El login y el área editorial no cambian.
-- `--color-muted` es `#6f685e` (AA sobre `#faf7f2` y `#f3eee6`). Los índices usan `h2` en las tarjetas. `id="contact"` solo está en `/about`.
-- Metadata: `metadataBase`, Open Graph por defecto, `app/robots.ts`, manifiesto e iconos provisionales.
-- Fotos, párrafos de prueba y el email `hola@dwellhavana.example` viven en `lib/placeholders.ts`. El email real es `NEXT_PUBLIC_CONTACT_EMAIL`.
-- OG, RSS y embed piden la imagen a `/_next/image` (1200px, calidad 70).
-- `lib/safe-redirect.ts` solo acepta un path relativo del mismo origen. Lo usan `/auth/callback` y `/iniciar-sesion`.
-- CI ejecuta `npm run lint`, `npm test` y `npm run build`.
-- `ADMIN_TOKEN` sigue como fallback temporal.
+La web pública es `https://dwell-havanna.vercel.app`. `NEXT_PUBLIC_SITE_URL` ya está así en Vercel. `dwellhavana.com` y el correo por Resend todavía no están conectados. `ADMIN_TOKEN` sigue como acceso de emergencia (DH-SEC-002 pendiente) con `ADMIN_TOKEN_TTL_SECONDS=3600`.
 
-## Verificación de esta sesión
+## Lanzamiento, a cargo de Ociel
 
-- `npm run lint`
-- `npm test`: 17 pruebas pasan y 1 E2E HTTP se omite porque no hay variables `E2E_*`
-- `npm run build`: el contenido público queda en ISR de 1 h. Siguen dinámicas `/admin/review`, `/api/submissions` y `/auth/callback`
-- Lighthouse local contra `next start`: `docs/Tech/07-rendimiento.md`
+- Reactivar producción y aplicar el bucket privado.
+- Invitar su cuenta en Auth y después insertar la fila `owner`.
+- Activar la protección de contraseñas filtradas en el dashboard de Auth.
+- Renovar `dwellhavana.com` antes del 2026-10-06. El DNS espera a que el dominio se conecte.
+- Sustituir las imágenes y los textos de `lib/placeholders.ts`. Eso bloquea el lanzamiento.
 
-No se tocó ningún proyecto Supabase, no se ejecutaron migraciones remotas y no se desplegó.
+La lista completa es el Paso 2 de `docs/PRODUCT/roadmap.md`. Los hallazgos prioritarios de la auditoría del 2026-09-30 están cerrados en el #14. Quedan DH-SEC-002, el rate limit, los hallazgos bajos y la reactivación.
+
+Lighthouse local contra `next start`, en móvil: rendimiento 93–98 y accesibilidad 100 (`docs/Tech/07-rendimiento.md`).
 
 No commitear `.env.local`, tokens de Supabase, contraseñas, service keys ni cookies de E2E.
