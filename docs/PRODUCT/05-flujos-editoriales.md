@@ -6,7 +6,7 @@ Fuente: `app/contribuir/page.tsx`, `app/api/submissions/route.ts`, `app/admin/re
 
 `Invitación admin` → `Supabase Auth` → `Formulario /contribuir` → `POST /api/submissions` → fila `submissions(status='pending')`. Nada visible al público.
 
-- Form (`app/contribuir/page.tsx`): handle*, title≤140, caption*≤2000, photo* JPEG, checkbox `rights=true`*. Errores en español mapeados por código (`FRIENDLY`).
+- Form (`app/contribuir/page.tsx`): handle*, title≤140, caption*≤2000, photo* (JPEG, PNG, WebP o HEIC), checkbox `rights=true`*. Antes del POST, `prepareSubmissionPhoto` deja un JPEG de lado largo ≤ 2560 px y ≤ 4 MB. Un JPEG que ya cumple eso no se recomprime. Mientras tanto el botón dice «Preparando foto…». Si el navegador no decodifica el archivo, no hay POST. Los mensajes de error están en inglés, en `FRIENDLY`. El servidor no afloja sus topes.
 - Auth (`app/iniciar-sesion/page.tsx`): solo envía enlace OTP a usuarios ya invitados (`shouldCreateUser=false`). No hay registro público.
 - API (`app/api/submissions/route.ts`, multipart): exige sesión Auth (401), comprueba el vínculo `verified_contributors.auth_user_id` con el handle enviado (403), valida handle+caption (422), rights (422) y JPEG (422). La foto no puede pasar de 4 MB (`422 photo_too_large`). Un `Content-Length` o un stream por encima de 4,5 MB responde `413 body_too_large` sin leer el resto. El servidor reencodea el JPEG, aplica la orientación y tira el EXIF. Sube a `dwell-media/submissions/<uuid>.jpg` (bucket privado, sin handle en la ruta) e inserta `image_url` con esa ruta, `source='form', rights_granted=true`. Si el insert falla, borra el huérfano (best-effort).
 - Contrato detallado ya documentado en `docs/Idea/Fase-1-Cierre.md §2` — no se duplica aquí.

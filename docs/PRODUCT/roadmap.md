@@ -53,6 +53,7 @@ Este documento reúne el trabajo hecho, los pasos de activación y las fases sig
 - [x] Crear `/contribuir`.
 - [x] Crear `POST /api/submissions` con `multipart/form-data`.
 - [x] Validar colaborador autorizado, caption, derechos, JPEG y límite de 4 MB.
+- [x] Redimensionar en el navegador antes de enviar (lado largo 2560 px, JPEG ≤ 4 MB) sin recomprimir un JPEG que ya cabe.
 - [x] Subir originales a Supabase Storage.
 - [x] Limpiar archivos huérfanos cuando falla el insert.
 - [x] Crear `/admin/review`.

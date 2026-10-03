@@ -57,7 +57,7 @@ scripts/apply-canonical-sql.sh --with-seed
 
 `scripts/apply-canonical-sql.sh --apply` exige `DATABASE_URL` y `psql`. Si la URL contiene el ref de producción `sfujmwumtzuzwwhfmyxa`, el script se niega salvo `--allow-production`. No lo ejecutes contra producción desde un agente. El alta del primer `owner` queda fuera del script, con el `auth_user_id` real.
 
-Verificación de esta preparación: `lint`, `test` (28 pasan, 1 E2E omitido) y `build`. El detalle de Lighthouse está en `docs/Tech/07-rendimiento.md`.
+Verificación de esta preparación: `lint`, `test` (32 pasan, 1 E2E omitido) y `build`. El detalle de Lighthouse está en `docs/Tech/07-rendimiento.md`.
 
 ## Activación (lado humano)
 
@@ -153,6 +153,6 @@ Cuando exista el proyecto, configura las mismas claves de `.env.example`. `SUPAB
 - La columna y el índice de vínculo se crean con `supabase/03-contributor-auth.sql` si el proyecto ya ejecutó el esquema inicial.
 - El E2E HTTP se activa solo con variables `E2E_*` de un proyecto de testing dedicado; `E2E_AUTH_COOKIE` representa la sesión de un colaborador invitado y nunca debe apuntar a producción.
 - RLS sin policies. `dwell-media` es privado y no tiene policy de `SELECT`. `dwell-published` es público y solo recibe la copia aprobada. La escritura de ambos es solo `service_role` (ver `04`).
-- Solo JPEG de hasta 4 MB, sin EXIF, `rights_granted` obligatorio, allowlist estricta, limpieza de huérfanos en API. Un cuerpo por encima de 4,5 MB se rechaza antes de leerlo entero.
+- Solo JPEG de hasta 4 MB, sin EXIF, `rights_granted` obligatorio, allowlist estricta, limpieza de huérfanos en API. Un cuerpo por encima de 4,5 MB se rechaza antes de leerlo entero. El formulario reduce la foto antes del POST; el servidor mantiene estos topes.
 - Free tier estimado: ~200 fotos ≈ 60MB, sobra para arranque.
 - `ADMIN_TOKEN` queda como fallback temporal hasta validar el primer `owner` en producción. Su cookie expira por defecto en 7 días y puede ajustarse con `ADMIN_TOKEN_TTL_SECONDS`; revocar el token requiere cambiar el secreto.

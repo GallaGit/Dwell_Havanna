@@ -30,7 +30,7 @@ Sin DB configurada el sitio funciona igual (fallback estático de `lib/data.ts`)
 ### 1.3 Decisión de fotos (implementada)
 Responde a "¿qué DB es buena para fotos?": binarios en **Supabase Storage**, metadatos en **Postgres**.
 - Bucket `dwell-media` privado, sin policy de `SELECT`. La copia aprobada va a `dwell-published` (público). Escritura solo `service_role`. El detalle operativo está en `docs/Tech/06-config-operacion.md`.
-- Validación en API: **solo JPEG, ≤ 4 MB**, handle obligatorio, texto obligatorio, `rights` obligatorio. El cuerpo por encima de 4,5 MB se rechaza antes de leerlo entero. El JPEG se guarda sin EXIF, con la orientación aplicada.
+- Validación en API: **solo JPEG, ≤ 4 MB**, handle obligatorio, texto obligatorio, `rights` obligatorio. El cuerpo por encima de 4,5 MB se rechaza antes de leerlo entero. El JPEG se guarda sin EXIF, con la orientación aplicada. El formulario, además, convierte y reduce la foto en el navegador antes del POST. Ese paso no cambia este contrato.
 - Se guarda en `submissions/<uuid>.jpg`, sin el handle en la ruta. Las variantes las genera `next/image` al servir (WebP/AVIF + responsive). `next.config.ts` ya acepta `*.supabase.co`.
 - RLS activado en las 5 tablas **sin policies** (defensa en profundidad: con `service_role` todo funciona; `anon`/`authenticated` no ven nada aunque la Data API exponga una tabla por error).
 - Estimación de capacidad free tier (1GB + 2GB transferencia): ~200 fotos optimizadas ≈ 60MB. Sobra para el arranque.
