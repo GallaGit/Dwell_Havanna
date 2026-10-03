@@ -41,7 +41,7 @@ Este documento reúne el trabajo hecho, los pasos de activación y las fases sig
 - [x] Crear `supabase/02-seed.sql`.
 - [x] Definir las tablas `properties`, `journal_posts`, `verified_contributors`, `submissions` y `syndications`.
 - [x] Activar RLS en las tablas sin exponer lecturas públicas.
-- [x] Crear el bucket `dwell-media` con lectura pública y escritura restringida al servidor.
+- [x] Crear el bucket `dwell-media` privado y `dwell-published` para la copia ya aprobada. La escritura sigue restringida al servidor.
 - [x] Crear `lib/db.ts` para el cliente server-side.
 - [x] Crear `lib/content.ts` para leer contenido publicado.
 - [x] Mantener `lib/data.ts` como fallback estático.
@@ -52,7 +52,8 @@ Este documento reúne el trabajo hecho, los pasos de activación y las fases sig
 
 - [x] Crear `/contribuir`.
 - [x] Crear `POST /api/submissions` con `multipart/form-data`.
-- [x] Validar colaborador autorizado, caption, derechos, JPEG y límite de 8 MB.
+- [x] Validar colaborador autorizado, caption, derechos, JPEG y límite de 4 MB.
+- [x] Redimensionar en el navegador antes de enviar (lado largo 2560 px, JPEG ≤ 4 MB) sin recomprimir un JPEG que ya cabe.
 - [x] Subir originales a Supabase Storage.
 - [x] Limpiar archivos huérfanos cuando falla el insert.
 - [x] Crear `/admin/review`.
@@ -96,7 +97,7 @@ Las optimizaciones de imagen ya están en `main` desde el PR #2 (`c100222`, `per
 - [x] Cubrir normalización de handles.
 - [x] Cubrir JPEG válido y firma binaria inválida.
 - [x] Cubrir derechos obligatorios.
-- [x] Cubrir el límite de 8 MB.
+- [x] Cubrir el límite de 4 MB y el tope de 4,5 MB del cuerpo.
 - [x] Añadir una prueba HTTP end-to-end opt-in para `/api/submissions`, con limpieza de datos y archivos temporales.
 - [x] Proteger submissions con sesión Supabase Auth y vínculo `auth_user_id` en `verified_contributors`.
 - [x] Añadir acceso por invitación en `/iniciar-sesion`; no existe registro público.
@@ -243,17 +244,21 @@ Aplicar en el SQL Editor, en este orden. Los nombres son los archivos del reposi
 2. `supabase/03-contributor-auth.sql`
 3. `supabase/04-editorial-permissions.sql`
 4. `supabase/migrations/20260921000300_editorial_member_management.sql`
-5. `supabase/02-seed.sql`, solo si se quiere el contenido de ejemplo
-6. Alta del primer `owner` en `editorial_members` con su `auth_user_id`
+5. `supabase/migrations/20261003150500_private_dwell_media.sql`
+6. `supabase/02-seed.sql`, solo si se quiere el contenido de ejemplo
+7. Alta del primer `owner` en `editorial_members` con su `auth_user_id`
+
+En un proyecto que ya aplicó el SQL viejo, ejecuta solo el paso 5 y después `scripts/migrate-dwell-media-objects.mjs`. El detalle, incluido cómo cambian las rutas de las fotos ya aprobadas, está en `docs/Tech/06-config-operacion.md`, sección «Reactivar producción con el bucket privado». No hay variables nuevas.
 
 - [ ] Confirmar el proyecto Supabase de producción. A re-verificar: el proyecto del 2026-09-15 no resuelve.
 - [ ] Ejecutar `supabase/01-schema.sql`. A re-verificar: el 2026-09-15 ya estaba aplicado.
 - [ ] Ejecutar `supabase/03-contributor-auth.sql`.
 - [ ] Ejecutar `supabase/04-editorial-permissions.sql`.
 - [ ] Ejecutar `supabase/migrations/20260921000300_editorial_member_management.sql`.
+- [ ] Ejecutar `supabase/migrations/20261003150500_private_dwell_media.sql`. Deja `dwell-media` privado aunque el `INSERT` antiguo no cambiara el flag, y crea `dwell-published`.
 - [ ] Ejecutar `supabase/02-seed.sql` solo si se quiere el seed. A re-verificar: el 2026-09-15 ya estaba aplicado.
 - [ ] Registrar colaboradores en `verified_contributors`. A re-verificar: el 2026-09-15 ya había colaboradores.
-- [ ] Confirmar el bucket `dwell-media`. A re-verificar: el 2026-09-15 ya existía.
+- [ ] Migrar los objetos con `scripts/migrate-dwell-media-objects.mjs` (primero sin `--apply`). Las aprobadas pasan a `dwell-published/<uuid>.jpg`; las pendientes pierden el handle de la ruta; las rechazadas se borran.
 - [ ] Dar de alta el primer `owner` en `editorial_members` con su `auth_user_id`.
 - [ ] Invitar colaboradores mediante `/admin/review` y comprobar el vínculo Auth ↔ `verified_contributors`.
 
@@ -333,7 +338,7 @@ Acciones de la dueña de las cuentas, antes de implementar la API.
 - [ ] Solicitar los permisos requeridos.
 - [ ] Completar App Review y Advanced Access.
 - [ ] Crear y guardar un token de larga duración en secrets.
-- [ ] Confirmar que Meta puede descargar imágenes del bucket público.
+- [ ] Confirmar que Meta puede descargar la URL pública de `dwell-published`. Las pendientes no tienen URL pública.
 
 ## Paso 7: Fase 2, auto-crossposting
 

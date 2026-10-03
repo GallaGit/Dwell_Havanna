@@ -16,9 +16,14 @@ const confirmation = process.env.E2E_SUPABASE_CONFIRM === "dwell-havana-e2e";
 const shouldRun = environmentReady && confirmation;
 const baseUrl = "http://127.0.0.1:3100";
 const bucket = "dwell-media";
-const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00]);
 
-function formData({ handle, rights = "on" }) {
+async function formData({ handle, rights = "on" }) {
+  const sharp = (await import("sharp")).default;
+  const jpeg = await sharp({
+    create: { width: 2, height: 2, channels: 3, background: { r: 20, g: 40, b: 60 } },
+  })
+    .jpeg()
+    .toBuffer();
   const form = new FormData();
   form.set("handle", handle);
   form.set("caption", "Automated HTTP E2E submission");
@@ -81,14 +86,14 @@ test("POST /api/submissions validates and persists a submission over HTTP", {
 
     const unauthenticated = await fetch(`${baseUrl}/api/submissions`, {
       method: "POST",
-      body: formData({ handle: process.env.E2E_CONTRIBUTOR_HANDLE }),
+      body: await formData({ handle: process.env.E2E_CONTRIBUTOR_HANDLE }),
     });
     assert.equal(unauthenticated.status, 401);
     assert.equal((await readJson(unauthenticated)).error, "authentication_required");
 
     const missingRights = await fetch(`${baseUrl}/api/submissions`, {
       method: "POST",
-      body: formData({ handle: process.env.E2E_CONTRIBUTOR_HANDLE, rights: "" }),
+      body: await formData({ handle: process.env.E2E_CONTRIBUTOR_HANDLE, rights: "" }),
       headers: { cookie: process.env.E2E_AUTH_COOKIE },
     });
     assert.equal(missingRights.status, 422);
@@ -96,7 +101,7 @@ test("POST /api/submissions validates and persists a submission over HTTP", {
 
     const unknownContributor = await fetch(`${baseUrl}/api/submissions`, {
       method: "POST",
-      body: formData({ handle: "@e2e-unknown-contributor" }),
+      body: await formData({ handle: "@e2e-unknown-contributor" }),
       headers: { cookie: process.env.E2E_AUTH_COOKIE },
     });
     assert.equal(unknownContributor.status, 403);
@@ -104,7 +109,7 @@ test("POST /api/submissions validates and persists a submission over HTTP", {
 
     const validSubmission = await fetch(`${baseUrl}/api/submissions`, {
       method: "POST",
-      body: formData({ handle: process.env.E2E_CONTRIBUTOR_HANDLE }),
+      body: await formData({ handle: process.env.E2E_CONTRIBUTOR_HANDLE }),
       headers: { cookie: process.env.E2E_AUTH_COOKIE },
     });
     assert.equal(validSubmission.status, 200);
@@ -121,9 +126,9 @@ test("POST /api/submissions validates and persists a submission over HTTP", {
     assert.ifError(lookupError);
     assert.equal(submission.status, "pending");
     assert.equal(submission.rights_granted, true);
-    const marker = `/storage/v1/object/public/${bucket}/`;
-    assert.ok(submission.image_url.includes(marker));
-    storagePath = decodeURIComponent(submission.image_url.split(marker)[1]);
+    assert.match(submission.image_url, /^submissions\/[0-9a-f-]{36}\.jpg$/i);
+    assert.equal(submission.image_url.includes("gallados"), false);
+    storagePath = submission.image_url;
   } finally {
     server.kill();
 

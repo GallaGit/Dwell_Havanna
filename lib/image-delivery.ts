@@ -9,7 +9,7 @@ function canonicalOrigin(): string {
 
 /**
  * URL pública ya pasada por el optimizador de Next.
- * OG, RSS y embed no usan next/image: sin esto, un JPEG de hasta 8 MB
+ * OG, RSS y embed no usan next/image: sin esto, el JPEG publicado
  * saldría tal cual desde Storage.
  * El origen es el mismo que `siteUrl` en lib/site.ts.
  */
