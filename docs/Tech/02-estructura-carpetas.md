@@ -6,11 +6,11 @@ La documentación de producto está en `docs/PRODUCT/`. Esta página describe la
 
 ```
 .
-├── .env.example            # plantilla env (URL, Supabase, ADMIN_TOKEN)
+├── .env.example            # plantilla env (URL, Supabase). Sin ADMIN_TOKEN
 ├── .env.local              # local real, gitignoreado (no commitear)
 ├── .gitignore              # ignora node_modules, .next, .env*, .vercel
 ├── package.json            # scripts dev/build/start/lint + deps
-├── next.config.ts          # images.remotePatterns (unsplash, picsum, *.supabase.co)
+├── next.config.ts          # images.remotePatterns (unsplash y el host Supabase del build), HSTS y COOP
 ├── tsconfig.json           # strict, alias @/*, plugin next
 ├── postcss.config.mjs      # @tailwindcss/postcss
 ├── eslint.config.mjs       # next core-web-vitals + typescript
@@ -60,7 +60,7 @@ La documentación de producto está en `docs/PRODUCT/`. Esta página describe la
 │   ├── prepare-submission-photo-browser.ts # canvas/createImageBitmap en /contribuir
 │   ├── submissions-validation.mjs # tope de 4 MB y de 4,5 MB del cuerpo
 │   ├── auth-cookie.ts      # detecta sb-*-auth-token sin llamar a Auth
-│   ├── editorial-auth.ts   # sesión editorial o fallback ADMIN_TOKEN
+│   ├── editorial-auth.ts   # sesión editorial (miembro activo). Sin token de emergencia
 │   ├── editorial-permissions.ts # owner, moderator y fallback
 │   ├── supabase-server.ts  # cliente Auth en el servidor
 │   └── supabase-browser.ts # cliente Auth en el navegador

@@ -2,14 +2,30 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { hasSupabaseAuthCookie } from "@/lib/auth-cookie";
 import { createFetchWithTimeout, supabaseFetchTimeoutMs } from "@/lib/fetch-with-timeout";
+import { contentSecurityPolicy } from "@/lib/security-headers";
+import { siteUrl } from "@/lib/site";
+
+function cspImageHosts(): string[] {
+  const hosts = ["images.unsplash.com"];
+  try {
+    hosts.push(new URL(siteUrl).hostname);
+  } catch {
+    // siteUrl es siempre una URL http(s) en este proyecto.
+  }
+  return hosts;
+}
 
 function withFramePolicy(response: NextResponse, pathname: string) {
-  if (pathname.startsWith("/embed")) {
-    response.headers.set("Content-Security-Policy", "frame-ancestors *");
-    return response;
+  response.headers.set(
+    "Content-Security-Policy",
+    contentSecurityPolicy(pathname, {
+      dev: process.env.NODE_ENV === "development",
+      extraImgHosts: cspImageHosts(),
+    }),
+  );
+  if (!pathname.startsWith("/embed")) {
+    response.headers.set("X-Frame-Options", "SAMEORIGIN");
   }
-  response.headers.set("X-Frame-Options", "SAMEORIGIN");
-  response.headers.set("Content-Security-Policy", "frame-ancestors 'self'");
   return response;
 }
 

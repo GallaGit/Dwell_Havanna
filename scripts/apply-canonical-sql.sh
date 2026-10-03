@@ -44,6 +44,7 @@ FILES=(
   "supabase/04-editorial-permissions.sql"
   "supabase/migrations/20260921000300_editorial_member_management.sql"
   "supabase/migrations/20261003150500_private_dwell_media.sql"
+  "supabase/migrations/20261003231500_rls_revoke_rate_limit.sql"
 )
 
 if [[ "$WITH_SEED" -eq 1 ]]; then
@@ -79,6 +80,9 @@ verified_contributors_auth_user_idx falla. Producción se migró así el
 
 La migración 20261003150500 deja dwell-media privado aunque ya existiera
 como público, y crea el bucket público dwell-published. No mueve archivos.
+La migración 20261003231500 revoca GRANT de anon/authenticated, fuerza RLS
+y crea el límite de ritmo. En una base que ya tiene el esquema, aplica
+solo esas dos migraciones: no reapliques 01-schema.sql.
 Producción (sfujmwumtzuzwwhfmyxa) y testing (ypeizxnafipvojpntsaw) están
 pausados desde el 2026-10-03. Al reactivar producción no reapliques
 01-schema.sql: ejecuta solo esa migración. Después, en dry-run:

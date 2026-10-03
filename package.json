@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:editorial-auth": "node --experimental-strip-types --test tests/editorial-permissions.test.mjs",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+    "test:editorial-auth": "node --experimental-strip-types --import ./tests/register-ts-resolve.mjs --test tests/editorial-permissions.test.mjs",
+    "test": "node --experimental-strip-types --import ./tests/register-ts-resolve.mjs --test tests/*.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -16,6 +16,7 @@
     "next": "16.3.8",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "server-only": "0.0.1",
     "sharp": "0.35.5"
   },
   "devDependencies": {

@@ -4,6 +4,17 @@ import { JpegProcessingError, stripJpegMetadata } from "@/lib/jpeg-metadata";
 import { pendingObjectPath, PRIVATE_BUCKET } from "@/lib/submission-media.mjs";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
 import {
+  SUBMISSION_IP_LIMIT,
+  SUBMISSION_IP_WINDOW_SECONDS,
+  SUBMISSION_USER_LIMIT,
+  SUBMISSION_USER_WINDOW_SECONDS,
+  clientAddress,
+  consumeRateLimit,
+  hashRateLimitSubject,
+  rateLimitFailure,
+  rateLimitKey,
+} from "@/lib/rate-limit";
+import {
   contentLengthExceeded,
   isJpeg,
   MAX_REQUEST_BYTES,
@@ -35,6 +46,30 @@ export async function POST(req: Request): Promise<Response> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return jsonError("authentication_required", 401);
+
+  const limitFailure = rateLimitFailure(
+    await Promise.all([
+      consumeRateLimit(
+        db,
+        rateLimitKey("submission:user", hashRateLimitSubject(user.id)),
+        SUBMISSION_USER_LIMIT,
+        SUBMISSION_USER_WINDOW_SECONDS,
+      ),
+      consumeRateLimit(
+        db,
+        rateLimitKey(
+          "submission:ip",
+          hashRateLimitSubject(
+            clientAddress(req.headers.get("x-forwarded-for"), req.headers.get("x-real-ip")),
+          ),
+        ),
+        SUBMISSION_IP_LIMIT,
+        SUBMISSION_IP_WINDOW_SECONDS,
+      ),
+    ]),
+  );
+  if (limitFailure === "rate_limit_unavailable") return jsonError("rate_limit_unavailable", 503);
+  if (limitFailure === "rate_limited") return jsonError("rate_limited", 429);
 
   if (contentLengthExceeded(req.headers.get("content-length"))) {
     return jsonError("body_too_large", 413);

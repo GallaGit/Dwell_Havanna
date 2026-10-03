@@ -6,12 +6,15 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
           cache: npm
@@ -20,5 +23,7 @@ jobs:
       # Unit tests. tests/submissions-http.e2e.test.mjs skips unless E2E_* is set.
       # Do not add those secrets to this workflow.
       - run: npm test
+      # Production dependencies only. Fails on high and critical advisories.
+      - run: npm audit --omit=dev --audit-level=high
       # Build does not need Supabase secrets. Public env vars fall back in code.
       - run: npm run build

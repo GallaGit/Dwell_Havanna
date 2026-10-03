@@ -109,7 +109,7 @@ Las optimizaciones de imagen ya están en `main` desde el PR #2 (`c100222`, `per
 
 ## Evolución de permisos editoriales
 
-Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. El 2026-09-25 testing tenía dos `owner` activos y producción tenía el esquema sin filas en `editorial_members`. Los dos proyectos están pausados desde el 2026-10-03. `ADMIN_TOKEN` sigue como acceso de emergencia. Retirarlo es DH-SEC-002 y está pendiente. En Vercel, `ADMIN_TOKEN_TTL_SECONDS=3600`.
+Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. El 2026-09-25 testing tenía dos `owner` activos y producción tenía el esquema sin filas en `editorial_members`. Los dos proyectos están pausados desde el 2026-10-03. El código ya no acepta el token (DH-SEC-002). Falta borrar `ADMIN_TOKEN` y `ADMIN_TOKEN_TTL_SECONDS` en Vercel después de desplegar.
 
 ### Modelo decidido y base implementada
 
@@ -119,7 +119,7 @@ Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. El 2026-09-25 test
 - [x] Permitir que solo la propietaria otorgue, retire o cambie permisos desde `/admin/review`.
 - [x] Añadir un estado activo para revocar el acceso sin borrar el historial.
 - [x] Registrar quién y cuándo ejecutó cada acción de moderación.
-- [x] No usar `ADMIN_TOKEN` para moderadores. El token solo queda como fallback temporal.
+- [x] No usar `ADMIN_TOKEN` para moderadores. El token se retiró del código (DH-SEC-002).
 
 ### Roles y permisos
 
@@ -152,7 +152,7 @@ Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. El 2026-09-25 test
    - [x] Invitar la cuenta Supabase de la propietaria en el proyecto de testing.
    - [x] Vincularla con el rol `owner` en testing.
    - [x] Probar el acceso individual en testing: la cuenta abre `/admin/review` y ve la cola, las invitaciones y la gestión de miembros.
-   - [x] Mantener `ADMIN_TOKEN` solo como fallback temporal.
+   - [x] El fallback `ADMIN_TOKEN` se retiró del código. El panel solo abre con un miembro activo.
 
 5. **Añadir moderadores**
    - [x] Permitir que `owner` invite moderadores.
@@ -161,16 +161,16 @@ Esta evolución reemplaza el uso compartido de `ADMIN_TOKEN`. El 2026-09-25 test
    - [x] Impedir que un moderador invite, desactive o eleve a otro moderador.
 
 6. **Migrar la cola de moderación**
-   - [x] Proteger `/admin/review` con Supabase Auth y el rol editorial, manteniendo el fallback temporal.
+   - [x] Proteger `/admin/review` con Supabase Auth y el rol editorial. No hay token de emergencia.
    - [x] Permitir a `moderator` aprobar y rechazar submissions.
    - [x] Guardar un evento de auditoría para cada decisión.
    - [x] Rechazar dos decisiones simultáneas sobre el mismo envío mediante la condición `status='pending'`.
 
 7. **Añadir pruebas y retirar el fallback**
-   - [x] Cubrir `owner`, `moderator`, miembro inactivo y el fallback temporal en `tests/editorial-permissions.test.mjs`.
+   - [x] Cubrir `owner`, `moderator`, miembro inactivo y el rechazo de un objeto con forma de fallback en `tests/editorial-permissions.test.mjs`.
    - [ ] Probar en navegador la revocación de una cuenta que ya tenía sesión.
    - [ ] Probar en navegador la auditoría de aprobaciones y rechazos.
-   - [ ] Retirar `ADMIN_TOKEN` (DH-SEC-002) cuando el acceso `owner` individual esté verificado en producción. Hasta entonces sigue como acceso de emergencia, con `ADMIN_TOKEN_TTL_SECONDS=3600`.
+   - [x] Retirar `ADMIN_TOKEN` del código (DH-SEC-002). Borrar las variables en Vercel es un paso manual del despliegue.
 
 ### Correcciones y retiro solicitados por contribuidores
 
@@ -225,18 +225,33 @@ Los hallazgos prioritarios quedaron cerrados en el PR #14, ya en `main`:
 - [x] DH-SEC-006. Next.js `16.3.8`.
 - [x] El navegador reduce PNG, WebP, HEIC (si lo decodifica) y las fotos grandes a un JPEG de lado largo ≤ 2560 px y de menos de 4 MB. Un JPEG que ya cumple eso se envía tal cual.
 
-Pendiente:
+Cerrado en código, pendiente de aplicar en la base y en Vercel:
 
-- [ ] DH-SEC-002. Retirar `ADMIN_TOKEN`. Sigue como acceso de emergencia. En Vercel, `ADMIN_TOKEN_TTL_SECONDS=3600`.
-- [ ] Rate limit de envíos (el resto de DH-SEC-004).
-- [ ] Hallazgos bajos: `server-only` en `lib/db.ts` (DH-SEC-007), CSP/HSTS/COOP (008), hostname fijo en `remotePatterns` (009), mensaje uniforme del magic link (010), `signOut` (011), desactivar el signup en el dashboard (012), `REVOKE` / `FORCE RLS` (013), rotar la service role al reactivar (014) y `npm audit` en CI.
-- [ ] Reactivar producción y aplicar el bucket privado. El procedimiento está en el Paso 2.
+- [x] DH-SEC-002. El código ya no lee `ADMIN_TOKEN` ni escribe la cookie `dh_admin`. Tras el despliegue hay que borrar `ADMIN_TOKEN` y `ADMIN_TOKEN_TTL_SECONDS` en Vercel.
+- [x] DH-SEC-004, el ritmo. `consume_rate_limit` en Postgres. Envíos, enlace mágico e invitaciones. Si la función no responde, no se envía ni se sube.
+- [x] DH-SEC-007. `import "server-only"` en `lib/db.ts`. La lectura pública usa la clave publishable cuando la policy `published_read` devuelve filas. Hasta entonces repite el filtro `status = published` con `service_role`.
+- [x] DH-SEC-008. CSP en `proxy.ts` (sin nonce, para no apagar el ISR), HSTS y COOP en `next.config.ts`.
+- [x] DH-SEC-009. `remotePatterns` toma el hostname de `NEXT_PUBLIC_SUPABASE_URL`. Picsum ya no está. Unsplash sigue por el seed.
+- [x] DH-SEC-010. `/api/auth/magic-link` responde el mismo texto de bandeja, esté o no invitado el email.
+- [x] DH-SEC-011. Cerrar sesión en `/contribuir` y `/admin/review`. Borra la sesión de Auth y, si queda, `dh_admin`.
+- [x] DH-SEC-012, el código. `shouldCreateUser: false` está en el servidor. Falta desactivar el signup en el dashboard de Supabase.
+- [x] DH-SEC-013, el SQL. Migración `20261003231500_rls_revoke_rate_limit.sql`. Falta aplicarla en la base.
+- [x] DH-SEC-014. El ref no se rota. Al reactivar, sí se rota la service role. No copies el ref a un issue público. `SECURITY.md` lo dice.
+- [x] DH-SEC-015. Un solo camino de aplicación: `scripts/apply-canonical-sql.sh`. El porqué de no meter el esquema base en `migrations/` está en `supabase/README.md`.
+- [x] CI: `npm audit --omit=dev --audit-level=high`, Dependabot, `permissions: contents: read` y Actions por SHA.
+
+Pendiente de operación, no de código:
+
+- [ ] Reactivar producción y aplicar el bucket privado, el `REVOKE` / `FORCE RLS`, la policy de publicados y el límite de ritmo. El procedimiento está en el Paso 2.
+- [ ] Borrar `ADMIN_TOKEN` y `ADMIN_TOKEN_TTL_SECONDS` en Vercel.
+- [ ] Desactivar el signup en Authentication → Providers → Email.
+- [ ] Rotar la service role al reactivar (DH-SEC-014).
 
 ## Paso 2: activar Supabase y producción
 
 La web pública es `https://dwell-havanna.vercel.app`. `NEXT_PUBLIC_SITE_URL` ya está configurada así en Vercel. `dwellhavana.com` es el dominio siguiente, con correo por Resend, y todavía no está conectado. El registro del esquema al 2026-09-25 está en `docs/Tech/08-estado-supabase-2026-09-25.md`. El procedimiento de reactivación está en `docs/Tech/06-config-operacion.md`.
 
-Producción (`sfujmwumtzuzwwhfmyxa`, Dwell_Havanna_DB) y testing (`ypeizxnafipvojpntsaw`) están pausados desde el 2026-10-03. Al reactivar producción no reapliques el SQL del 2026-09-25. Aplica solo `supabase/migrations/20261003150500_private_dwell_media.sql` y después `scripts/migrate-dwell-media-objects.mjs`.
+Producción (`sfujmwumtzuzwwhfmyxa`, Dwell_Havanna_DB) y testing (`ypeizxnafipvojpntsaw`) están pausados desde el 2026-10-03. Al reactivar producción no reapliques el SQL del 2026-09-25. Aplica `supabase/migrations/20261003150500_private_dwell_media.sql` y `supabase/migrations/20261003231500_rls_revoke_rate_limit.sql`, y después `scripts/migrate-dwell-media-objects.mjs`.
 
 `scripts/apply-canonical-sql.sh` lista el orden de una base nueva. Con `--apply`, cada archivo va en una transacción. El ref `sfujmwumtzuzwwhfmyxa` queda bloqueado salvo `--allow-production`.
 
@@ -254,11 +269,12 @@ Aquel día: siete tablas, RLS activo y 0 policies. Cero usuarios Auth. Cero fila
 ### Reactivar producción
 
 - [ ] Reactivar `sfujmwumtzuzwwhfmyxa`. Testing (`ypeizxnafipvojpntsaw`) también está pausado.
-- [ ] Ejecutar solo `supabase/migrations/20261003150500_private_dwell_media.sql`. Deja `dwell-media` privado y crea `dwell-published`. No reapliques `01-schema.sql`.
+- [ ] Ejecutar `supabase/migrations/20261003150500_private_dwell_media.sql` y después `supabase/migrations/20261003231500_rls_revoke_rate_limit.sql`. La primera deja `dwell-media` privado y crea `dwell-published`. La segunda revoca GRANT, fuerza RLS, abre la lectura de publicados y crea el límite de ritmo. No reapliques `01-schema.sql`.
 - [ ] Migrar los objetos con `scripts/migrate-dwell-media-objects.mjs` (primero sin `--apply`). Las aprobadas pasan a `dwell-published/<uuid>.jpg`; las pendientes pierden el handle de la ruta; las rechazadas se borran.
 - [ ] Invitar la cuenta de Ociel en Supabase Auth. Después, insertar su fila `owner` en `editorial_members`. La columna es clave foránea a `auth.users`.
 - [ ] Activar en el dashboard de Auth la protección de contraseñas filtradas.
-- [ ] Rotar la service role al reactivar (DH-SEC-014).
+- [ ] Desactivar el signup en Authentication → Providers → Email (DH-SEC-012). El código ya envía `shouldCreateUser: false`, y eso no basta si el proyecto acepta altas directas.
+- [ ] Rotar la service role al reactivar (DH-SEC-014). El ref del proyecto puede seguir en el repo. No lo copies a un issue público. No hace falta rotarlo por estar escrito.
 
 ### Hosting, dominio y medición
 
@@ -268,7 +284,7 @@ Aquel día: siete tablas, RLS activo y 0 policies. Cero usuarios Auth. Cero fila
 - [ ] Apuntar el DNS del apex y de `www` al hosting cuando se use ese dominio.
 - [ ] En Supabase Auth, fijar la Site URL a la URL pública vigente y la allowlist de `/auth/callback`. Hoy es `https://dwell-havanna.vercel.app`. Cuando entre `dwellhavana.com`, cambia las dos.
 - [ ] Configurar las plantillas Invite user y Magic Link con `token_hash` y `type`, como en `docs/Tech/06-config-operacion.md`.
-- [ ] Confirmar en Vercel `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` y `ADMIN_TOKEN` contra el proyecto reactivado. `ADMIN_TOKEN_TTL_SECONDS=3600`.
+- [ ] Confirmar en Vercel `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` y `SUPABASE_SERVICE_ROLE_KEY` contra el proyecto reactivado. Borrar `ADMIN_TOKEN` y `ADMIN_TOKEN_TTL_SECONDS`. `NEXT_PUBLIC_SUPABASE_URL` tiene que estar en el build: el hostname de `images.remotePatterns` sale de ahí.
 - [ ] Confirmar que ninguna variable secreta se expone al navegador.
 - [ ] Ejecutar Lighthouse contra `https://dwell-havanna.vercel.app`. Objetivo: Performance ≥ 90 y Accesibilidad ≥ 95 en móvil (`docs/Tech/07-rendimiento.md`).
 - [ ] Sustituir imágenes, textos e iconos provisionales (`docs/PRODUCT/contenido-placeholder.md`).
@@ -278,15 +294,16 @@ La plantilla de los emails de invitación y de magic link está en `docs/Tech/06
 
 ### Orden SQL de una base nueva
 
-No uses esta lista para reactivar producción. Ahí solo va la migración del bucket privado, como arriba.
+No uses esta lista para reactivar producción. Ahí van las dos migraciones del Paso 2, no el esquema entero.
 
 1. `supabase/01-schema.sql`
 2. `supabase/03-contributor-auth.sql`
 3. `supabase/04-editorial-permissions.sql`
 4. `supabase/migrations/20260921000300_editorial_member_management.sql`
 5. `supabase/migrations/20261003150500_private_dwell_media.sql`
-6. `supabase/02-seed.sql`, solo si se quiere el contenido de ejemplo
-7. Alta del primer `owner` en `editorial_members` con su `auth_user_id`
+6. `supabase/migrations/20261003231500_rls_revoke_rate_limit.sql`
+7. `supabase/02-seed.sql`, solo si se quiere el contenido de ejemplo
+8. Alta del primer `owner` en `editorial_members` con su `auth_user_id`
 
 Si `verified_contributors` ya existe sin `auth_user_id`, `03-contributor-auth.sql` va antes de `01-schema.sql`. Producción se migró así el 2026-09-25. El detalle está en `docs/Tech/06-config-operacion.md`.
 
@@ -406,7 +423,7 @@ Controles que el código y el esquema ya aplican. La evidencia está en el repos
 - [x] Validación de derechos de imagen. `POST /api/submissions` exige `rights` y guarda `rights_granted`. `tests/submissions-validation.test.mjs` cubre el rechazo `rights_required`.
 - [x] Lista de colaboradores verificados. El envío exige sesión y un `verified_contributors.auth_user_id` vinculado al handle. Un handle ajeno o desconocido responde `403 unknown_contributor` (`docs/Idea/Fase-1-Cierre.md` §2).
 - [x] `SUPABASE_SERVICE_ROLE_KEY` no llega al navegador. Solo la leen módulos de servidor (`lib/db.ts`). No usa el prefijo `NEXT_PUBLIC_`.
-- [x] `ADMIN_TOKEN` no llega al navegador. La cookie `dh_admin` es httpOnly y el secreto se compara en el servidor (`lib/editorial-auth.ts`). Sigue como acceso de emergencia (DH-SEC-002 pendiente), con `ADMIN_TOKEN_TTL_SECONDS=3600` en Vercel.
+- [x] No hay `ADMIN_TOKEN` en el código. El acceso editorial es una fila activa de `editorial_members`. El cierre de sesión borra una cookie `dh_admin` vieja si todavía está en el navegador.
 - [x] No hay publicación automática. Aprobar en `/admin/review` pide confirmación y solo entonces inserta `journal_posts` con `status='published'`.
 - [x] La web es la URL canónica. `lib/site.ts` expone `siteUrl` y `canonicalFor`.
 - [ ] Evitar URLs firmadas que Meta no pueda leer cuando exista la publicación en redes (Paso 7).
@@ -414,7 +431,7 @@ Controles que el código y el esquema ya aplican. La evidencia está en el repos
 ## Estado de validación local y de testing
 
 - `npm run lint`, `npm test` y `npm run build` pasan en la revisión del PR #14. La build no necesita secretos reales de Supabase. Con URL y service role de ejemplo, `/` sigue en ISR de una hora.
-- `npm test` pasa 32 pruebas y omite 1 E2E HTTP porque no hay variables `E2E_*`.
+- `npm test` pasa 53 pruebas y omite 1 E2E HTTP porque no hay variables `E2E_*`. El archivo `tests/security-controls.test.mjs` cubre el límite de ritmo, el mensaje único del enlace mágico y el cierre de sesión.
 - La tabla de rutas vigente está en `docs/Tech/03-frontend-rutas-render.md`. La cifra 19 es anterior a iconos, `robots.txt`, manifiesto y los slugs prerenderizados de `/embed`.
 - Lighthouse local (móvil y escritorio, `next start`) está en `docs/Tech/07-rendimiento.md`.
 - El E2E, cuando se configura, valida autenticación requerida, derechos obligatorios, colaborador desconocido, submission válida, persistencia y limpieza.

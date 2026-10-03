@@ -14,7 +14,7 @@ Al reactivar producción se aplica solo `supabase/migrations/20261003150500_priv
 
 ## Web y acceso
 
-La web pública es `https://dwell-havanna.vercel.app`. `NEXT_PUBLIC_SITE_URL` ya está así en Vercel. `dwellhavana.com` y el correo por Resend todavía no están conectados. `ADMIN_TOKEN` sigue como acceso de emergencia (DH-SEC-002 pendiente) con `ADMIN_TOKEN_TTL_SECONDS=3600`.
+La web pública es `https://dwell-havanna.vercel.app`. `NEXT_PUBLIC_SITE_URL` ya está así en Vercel. `dwellhavana.com` y el correo por Resend todavía no están conectados. El código ya no usa `ADMIN_TOKEN`. Tras desplegar, borra `ADMIN_TOKEN` y `ADMIN_TOKEN_TTL_SECONDS` en Vercel.
 
 ## Lanzamiento, a cargo de Ociel
 

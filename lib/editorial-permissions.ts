@@ -7,9 +7,10 @@ export type EditorialMember = {
   display_name: string | null;
 };
 
-export type EditorialAccess =
-  | { kind: "member"; member: EditorialMember }
-  | { kind: "legacy"; member: null };
+export type EditorialAccess = {
+  kind: "member";
+  member: EditorialMember;
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -42,13 +43,14 @@ export function getActiveEditorialAccess(value: unknown): EditorialAccess | null
 }
 
 export function canReview(access: EditorialAccess | null): boolean {
-  return access !== null;
+  const role = access?.member?.role;
+  return role === "owner" || role === "moderator";
 }
 
 export function canInvite(access: EditorialAccess | null): boolean {
-  return access?.kind === "legacy" || access?.member.role === "owner";
+  return access?.member?.role === "owner";
 }
 
 export function canManageMembers(access: EditorialAccess | null): boolean {
-  return access?.kind === "member" && access.member.role === "owner";
+  return access?.member?.role === "owner";
 }

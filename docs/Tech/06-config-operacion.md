@@ -13,10 +13,10 @@ Copiar `.env.example` → `.env.local` (gitignoreado, nunca commitear).
 | `NEXT_PUBLIC_SITE_URL` | Sí | `lib/site.ts` (OG, sitemap, feed, embeds) y `redirectTo` de las invitaciones Auth. La web pública es `https://dwell-havanna.vercel.app` y en Vercel la variable ya vale eso. Si falta, está vacía o no es una URL `http(s)` válida, la canónica usa esa misma web. Las invitaciones usan `http://localhost:3000` si la variable falta o está vacía. `dwellhavana.com` es el dominio siguiente y todavía no está conectado |
 | `NEXT_PUBLIC_SUPABASE_URL` | Sí | `lib/db.ts` y el cliente Auth |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sí | Supabase Auth en el navegador y cookies SSR |
-| `SUPABASE_SERVICE_ROLE_KEY` | **No, solo server** | `lib/db.ts`, API submissions, admin e invitaciones |
-| `ADMIN_TOKEN` | **No, solo server** | `app/admin/review/page.tsx` (cookie `dh_admin`) |
-| `ADMIN_TOKEN_TTL_SECONDS` | **No, solo server** | Duración de la cookie fallback; default 7 días |
-| `SUPABASE_FETCH_TIMEOUT_MS` | No | Timeout opcional de las lecturas a Supabase, en milisegundos. Si falta o no es un número positivo, el default es 5000. No lo lee el cliente del navegador |
+| `SUPABASE_SERVICE_ROLE_KEY` | **No, solo server** | `lib/db.ts`, API submissions, admin, invitaciones y el límite de ritmo |
+| `SUPABASE_FETCH_TIMEOUT_MS` | No | Timeout opcional de las lecturas a Supabase, en milisegundos. Si falta o no es un número positivo, el default es 5000. El enlace mágico usa 20 s y no lee esta variable |
+
+No hay `ADMIN_TOKEN` ni `ADMIN_TOKEN_TTL_SECONDS`. Si siguen en Vercel después de desplegar, bórralas. El panel entra con una cuenta `owner` o `moderator`.
 | `NEXT_PUBLIC_CONTACT_EMAIL` | Sí | `mailto` de `/about` y del footer. Si falta, `hola@dwellhavana.example` |
 
 > Nota: `docs/Idea/Fase-1-Cierre.md §4` cita `NEXT_PUBLIC_SUPABASE_ANON_KEY`; el `.env.example` actual usa `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (nuevo formato Supabase). Manda el `.env.example`.
@@ -27,7 +27,7 @@ Copiar `.env.example` → `.env.local` (gitignoreado, nunca commitear).
 
 `localhost` funciona en la máquina que ejecuta la app. No sirve para un invitado en otro equipo.
 
-`/iniciar-sesion` pide un enlace nuevo con `window.location.origin`. Si abres la app en `localhost`, ese enlace también apunta a `localhost`. El parámetro `next` pasa por `lib/safe-redirect.ts`: solo se acepta un path relativo del mismo origen. Si no lo es, el destino es `/contribuir`.
+`/iniciar-sesion` pide el enlace a `POST /api/auth/magic-link`. El servidor llama a `signInWithOtp` con `shouldCreateUser: false`. El `redirectTo` sale de `NEXT_PUBLIC_SITE_URL` (o `http://localhost:3000` si falta), no del `Origin` del navegador. El parámetro `next` pasa por `lib/safe-redirect.ts`: solo se acepta un path relativo del mismo origen. Si no lo es, el destino es `/contribuir`. Un email válido recibe siempre el mismo texto de bandeja, esté invitado o no. Si el límite de ritmo no responde, no se llama a Auth y el texto no cambia.
 
 `app/auth/callback/route.ts` acepta dos retornos:
 
@@ -73,8 +73,11 @@ El script usa este orden. Si `verified_contributors` ya existe y no tiene `auth_
 3. `supabase/04-editorial-permissions.sql`
 4. `supabase/migrations/20260921000300_editorial_member_management.sql`
 5. `supabase/migrations/20261003150500_private_dwell_media.sql`
-6. `supabase/02-seed.sql`, solo si se quiere el contenido de ejemplo
-7. Alta del primer `owner` en `editorial_members` con su `auth_user_id`
+6. `supabase/migrations/20261003231500_rls_revoke_rate_limit.sql`
+7. `supabase/02-seed.sql`, solo si se quiere el contenido de ejemplo
+8. Alta del primer `owner` en `editorial_members` con su `auth_user_id`
+
+El detalle de por qué `migrations/` no incluye el esquema base está en `supabase/README.md`.
 
 `supabase db push` y `supabase db reset` no crean una base vacía: `supabase/migrations/` no incluye `01-schema.sql` y no hay `supabase/config.toml`. Antes de un `db push` hay que alinear el historial con `supabase migration repair`. El procedimiento está en `docs/Tech/08-estado-supabase-2026-09-25.md`. `repair` solo cambia la tabla de historial.
 
@@ -84,7 +87,9 @@ El 2026-09-15 el proyecto `sfujmwumtzuzwwhfmyxa` ya tenía el esquema inicial, e
 
 No hace falta ninguna variable nueva en Vercel ni en Supabase. `SUPABASE_SERVICE_ROLE_KEY` sigue siendo la que firma las URLs del panel y la que copia la foto al bucket público.
 
-Al reactivar, no reapliques `01-schema.sql`. En el SQL Editor ejecuta solo `supabase/migrations/20261003150500_private_dwell_media.sql`. En un proyecto vacío usa el orden completo de arriba: el paso 5 repite el cierre del bucket y es idempotente. Testing está pausado igual que producción; esta sección es la de producción.
+Al reactivar, no reapliques `01-schema.sql`. En el SQL Editor ejecuta, en este orden, `supabase/migrations/20261003150500_private_dwell_media.sql` y `supabase/migrations/20261003231500_rls_revoke_rate_limit.sql`. Las dos son idempotentes. En un proyecto vacío usa el orden completo de arriba. Testing está pausado igual que producción; esta sección es la de producción.
+
+La segunda migración revoca `ALL` a `anon`, `authenticated` y `PUBLIC` en las tablas de la app, fuerza RLS y deja `GRANT` de las columnas públicas a `anon` y `authenticated` solo en `properties` y `journal_posts`, con policy `status = 'published'`. `body_mdx` no se concede. `service_role` tiene `BYPASSRLS`: la cola, las invitaciones y `consume_rate_limit` siguen funcionando. También crea `rate_limit_buckets`. Sin esa función, los envíos responden 503 y el enlace mágico no se envía (el formulario sigue diciendo que mires la bandeja).
 
 Ese SQL no mueve archivos. Hasta que no corras el script de objetos, las fotos aprobadas siguen en `dwell-media/submissions/<handle>/<uuid>.jpg` y dejan de ser descargables, porque el bucket pasa a privado.
 
@@ -122,7 +127,7 @@ Comprueba, con la clave publishable y sin sesión:
 Después del SQL:
 
 1. Alta de colaborador: `insert into verified_contributors (handle, display_name, source) values ('@arq.habana','Nombre','ig');`
-2. Desde `/admin/review`, entra con la cuenta `owner` e invita el email del colaborador usando el handle existente. `ADMIN_TOKEN` solo cubre esa invitación si la cuenta `owner` no está disponible.
+2. Desde `/admin/review`, entra con la cuenta `owner` e invita el email del colaborador usando el handle existente. No hay token de emergencia.
 3. El colaborador abre el enlace recibido. No existe registro público. La plantilla del email tiene que incluir `token_hash` y `type`, como arriba.
 4. Probar: `/contribuir` → enviar → `/admin/review` → confirmar la aprobación → ver el post en `/journal` con `journal_posts.status='published'`.
 5. La web pública ya es `https://dwell-havanna.vercel.app` y `NEXT_PUBLIC_SITE_URL` está configurada así en Vercel. `dwellhavana.com` es el dominio siguiente, con correo por Resend, y todavía no está conectado. La allowlist de Auth tiene que incluir la URL que reciba el enlace.
@@ -139,13 +144,15 @@ npm run test:editorial-auth
 
 ## Cabeceras y proxy
 
-`next.config.ts` añade en todas las rutas `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` y `Permissions-Policy` sin cámara, micrófono ni geolocalización.
+`next.config.ts` añade en todas las rutas `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` sin cámara, micrófono ni geolocalización, `Strict-Transport-Security: max-age=63072000; includeSubDomains` y `Cross-Origin-Opener-Policy: same-origin`. HSTS no lleva `preload`: `dwellhavana.com` todavía no está conectado. El navegador ignora HSTS si la respuesta llega por HTTP.
 
-`proxy.ts` pone `X-Frame-Options: SAMEORIGIN` y `frame-ancestors 'self'`, salvo en `/embed`, que solo lleva `frame-ancestors *` para que un tercero pueda usar el iframe. `X-Frame-Options` no va en `next.config.ts`: esa cabecera también alcanzaría al embed.
+`proxy.ts` pone la CSP. `script-src` es `'self' 'unsafe-inline'` (y `'unsafe-eval'` solo en desarrollo). No usa nonce: en Next 16 un nonce apaga el ISR de una hora. `object-src 'none'`, `base-uri 'self'` y `form-action 'self'` sí van. `frame-ancestors` es `'self'`, salvo en `/embed`, que usa `*` para que un tercero pueda usar el iframe. `X-Frame-Options: SAMEORIGIN` solo va fuera de `/embed`. La CSP no está en `next.config.ts`: dos políticas a la vez se cruzan y el embed dejaría de poder incrustarse.
+
+`images.remotePatterns` permite `images.unsplash.com` y, si `NEXT_PUBLIC_SUPABASE_URL` está en el build, el hostname concreto de ese proyecto. No hay comodín `*.supabase.co` ni `picsum.photos`. El seed sigue usando Unsplash.
 
 Si la petición no trae cookie `sb-<ref>-auth-token` (ni un trozo `.0`), el proxy no llama a Supabase Auth. Una visita anónima a una página pública no refresca sesión. Si la cookie existe, el refresco sigue en todas las rutas del matcher, incluidas las públicas.
 
-Las lecturas públicas usan `getPublishedContentClient()` (`lib/db.ts`): `fetch` con `next: { revalidate: 3600, tags: ["published-content"] }`. `getServiceClient()` sigue en `cache: "no-store"` para la cola y las mutaciones. Al aprobar, el panel llama a `updateTag("published-content")`.
+Las lecturas públicas usan `getPublishedContentClient()` (`lib/db.ts`) con la clave publishable y `fetch` con `next: { revalidate: 3600, tags: ["published-content"] }`. Si esa lectura no devuelve filas, `lib/content.ts` repite el mismo filtro `status = published` con `getServiceClient()`. Cuando la policy responde, `service_role` no entra en la página pública. `getServiceClient()` sigue en `cache: "no-store"` para la cola y las mutaciones. Al aprobar, el panel llama a `updateTag("published-content")`.
 
 Esas lecturas, el cliente de servidor y el proxy abortan el fetch a los 5 s, o a `SUPABASE_FETCH_TIMEOUT_MS` si es un número positivo. Si una lectura pública agota el tiempo, `lib/content.ts` la trata como cualquier otro error y usa el dataset estático de `lib/data.ts`: la portada, el journal, properties, el feed, el sitemap y el embed no responden 500. Ese fallback enseña el contenido de ejemplo. Hay que revisarlo antes de lanzar, porque un corte de Supabase puede publicar placeholders como si fueran la revista.
 
@@ -153,15 +160,17 @@ La subida de una foto (`POST`/`PUT` a `/storage/v1/object/<bucket>/<archivo>`) y
 
 ## Variables en Vercel
 
-El proyecto ya está en Vercel. La web pública es `https://dwell-havanna.vercel.app` y `NEXT_PUBLIC_SITE_URL` ya vale esa URL, sin barra final. `dwellhavana.com` se conectará más adelante, con correo por Resend, y todavía no está. `SUPABASE_SERVICE_ROLE_KEY` y `ADMIN_TOKEN` son secretos de servidor. `NEXT_PUBLIC_*` se incrustan en el cliente en el build.
+El proyecto ya está en Vercel. La web pública es `https://dwell-havanna.vercel.app` y `NEXT_PUBLIC_SITE_URL` ya vale esa URL, sin barra final. `dwellhavana.com` se conectará más adelante, con correo por Resend, y todavía no está. `SUPABASE_SERVICE_ROLE_KEY` es secreto de servidor. `NEXT_PUBLIC_*` se incrustan en el cliente en el build. `NEXT_PUBLIC_SUPABASE_URL` también fija el hostname de imágenes en ese build.
 
 ## Seguridad mínima
 
-- `service_role` y `ADMIN_TOKEN` jamás salen del servidor (`lib/db.ts` y admin son server-only). La publishable key sí puede llegar al navegador.
+- `service_role` no sale del servidor. `lib/db.ts`, `lib/supabase-server.ts` y `lib/editorial-auth.ts` importan `server-only`. La publishable key sí puede llegar al navegador.
 - `POST /api/submissions` exige una sesión Supabase Auth y comprueba que el usuario esté vinculado al handle enviado mediante `verified_contributors.auth_user_id`.
 - La columna y el índice de vínculo están en `supabase/01-schema.sql` y, para una tabla vieja, en `supabase/03-contributor-auth.sql`. En el esquema anterior a `03`, ese archivo va antes de `01-schema.sql`. Producción se migró así el 2026-09-25. El índice `verified_contributors_auth_user_idx` repite el que ya crea el `UNIQUE`; es deuda conocida, documentada en `docs/Tech/08-estado-supabase-2026-09-25.md`.
 - El E2E HTTP se activa solo con variables `E2E_*` de un proyecto de testing dedicado; `E2E_AUTH_COOKIE` representa la sesión de un colaborador invitado y nunca debe apuntar a producción.
-- RLS sin policies. `dwell-media` es privado y no tiene policy de `SELECT`. `dwell-published` es público y solo recibe la copia aprobada. La escritura de ambos es solo `service_role` (ver `04`).
+- RLS forzado en las tablas de la app, en el SQL de `20261003231500`. Policies de fila solo para `SELECT` de publicados en `properties` y `journal_posts`. El resto no tiene policy. `dwell-media` es privado y no tiene policy de `SELECT`. `dwell-published` es público y solo recibe la copia aprobada. La escritura de ambos es solo `service_role` (ver `04`).
 - Solo JPEG de hasta 4 MB, sin EXIF, `rights_granted` obligatorio, allowlist estricta, limpieza de huérfanos en API. Un cuerpo por encima de 4,5 MB se rechaza antes de leerlo entero. El formulario reduce la foto antes del POST; el servidor mantiene estos topes.
 - Free tier estimado: ~200 fotos ≈ 60MB, sobra para arranque.
-- `ADMIN_TOKEN` sigue como acceso de emergencia. Retirarlo es DH-SEC-002 y está pendiente. En Vercel, `ADMIN_TOKEN_TTL_SECONDS=3600`. Si la variable falta, el código usa 7 días. Revocar el token requiere cambiar el secreto.
+- No hay token de emergencia. Cerrar sesión está en `/contribuir` y `/admin/review`.
+- El límite de ritmo es la función `consume_rate_limit`. Envíos: 8 por hora y usuario, 20 por hora e IP. Enlace mágico: 5 cada 15 minutos por email (hash), 20 cada 15 minutos por IP. Invitaciones: 10 por hora y cuenta editorial. La clave guardada es un hash, no el email ni la IP. Si la base no anota el contador, la acción no se hace.
+- El signup hay que desactivarlo en el dashboard. El flag del servidor no impide que alguien llame a Auth con la clave publishable.

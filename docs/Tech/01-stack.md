@@ -19,7 +19,7 @@ Las decisiones de producto y el roadmap están en `docs/PRODUCT/roadmap.md`.
 
 ## Rendering / imágenes / fuentes
 
-- `next/image` con `remotePatterns` en `next.config.ts`: `images.unsplash.com`, `picsum.photos`, `*.supabase.co` (fotos publicadas en `dwell-published` y URLs firmadas del panel).
+- `next/image` con `remotePatterns` en `next.config.ts`: `images.unsplash.com` y el hostname concreto de `NEXT_PUBLIC_SUPABASE_URL` (fotos publicadas en `dwell-published` y URLs firmadas del panel). Picsum no se usa.
 - `next/font/google` en `app/layout.tsx`: Fraunces (normal e itálica, variable `--font-fraunces`) e Inter (`--font-inter`), `display: swap`. `@theme` apunta `--font-display` y `--font-body` a esas variables, con Georgia y `system-ui` como reserva.
 - `next/image`: `qualities: [70]` en `next.config.ts`, porque Next 16 solo admite 75 si no se declara la lista. La imagen LCP usa `preload`.
 - ISR con `export const revalidate = 3600` en home, slugs, sitemap, feed y embed. El embed también exporta `generateStaticParams()`.
@@ -48,6 +48,6 @@ Helpers propios: `.editorial-grid` (12 col), `.meta-label`, `.rule`, `.img-edito
 
 - Sin ORM, sin NextAuth, sin CMS headless, sin librería de formularios, sin i18n.
 - Pruebas con `node:test`: `npm test`. El E2E HTTP queda omitido si no hay variables `E2E_*`.
-- Acceso editorial con Supabase Auth y roles `owner` o `moderator`. `ADMIN_TOKEN` y la cookie `dh_admin` quedan como fallback temporal (ver `docs/PRODUCT/05-flujos-editoriales.md`).
+- Acceso editorial con Supabase Auth y roles `owner` o `moderator`. No hay token de emergencia (ver `docs/PRODUCT/05-flujos-editoriales.md`).
 - `README.md` describe el proyecto y apunta a `docs/`. El detalle de stack vive en esta carpeta.
 - `AGENTS.md` / `CLAUDE.md` solo contienen la regla de agente de Next (leer `node_modules/next/dist/docs/` antes de codificar).
