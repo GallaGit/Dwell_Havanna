@@ -1,6 +1,6 @@
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getPublishedContentClient, getServiceClient } from "./db";
+import { getPublishedContentClient, getPublishedFallbackClient } from "./db";
 import { choosePublishedRow, choosePublishedRows, type ReadResult, type RowRead } from "./published-read";
 import {
   properties as staticProperties,
@@ -14,8 +14,9 @@ import { journalPlaceholderParagraphs } from "./placeholders";
  * Capa de contenido — Fase 1.
  * Lee de Supabase (solo `status = 'published'`), primero con la clave
  * publishable. Si esa lectura no devuelve filas o falla, repite el mismo
- * filtro con `service_role` hasta que la policy `published_read` esté
- * aplicada. Si no hay DB o la consulta falla, cae a lib/data.ts.
+ * filtro con `service_role` (`getPublishedFallbackClient`, cacheable) hasta
+ * que la policy `published_read` esté aplicada. Si no hay DB o la consulta
+ * falla, cae a lib/data.ts. Una lista vacía confirmada no usa el estático.
  * Misma forma que antes: las páginas no cambian de props.
  *
  * `cache()` deduplica la lectura dentro de la misma petición
@@ -66,6 +67,15 @@ function toProperty(row: PropertyRow): Property {
   };
 }
 
+function isDynamicServerError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    (error as { digest?: unknown }).digest === "DYNAMIC_SERVER_USAGE"
+  );
+}
+
 async function readList<T>(
   client: SupabaseClient | null,
   query: (client: SupabaseClient) => PromiseLike<{ data: T[] | null; error: unknown }>,
@@ -75,7 +85,8 @@ async function readList<T>(
     const result = await query(client);
     if (result.error || !result.data) return { ok: false };
     return { ok: true, rows: result.data };
-  } catch {
+  } catch (error) {
+    if (isDynamicServerError(error)) throw error;
     return { ok: false };
   }
 }
@@ -89,7 +100,8 @@ async function readRow<T>(
     const result = await query(client);
     if (result.error) return { ok: false };
     return { ok: true, row: result.data };
-  } catch {
+  } catch (error) {
+    if (isDynamicServerError(error)) throw error;
     return { ok: false };
   }
 }
@@ -99,7 +111,7 @@ async function publishedList<T>(
 ): Promise<T[] | null> {
   const anon = await readList(getPublishedContentClient(), query);
   const service =
-    anon?.ok && anon.rows.length > 0 ? null : await readList(getServiceClient(), query);
+    anon?.ok && anon.rows.length > 0 ? null : await readList(getPublishedFallbackClient(), query);
   return choosePublishedRows(anon, service);
 }
 
@@ -107,7 +119,7 @@ async function publishedRow<T>(
   query: (client: SupabaseClient) => PromiseLike<{ data: T | null; error: unknown }>,
 ): Promise<T | null | undefined> {
   const anon = await readRow(getPublishedContentClient(), query);
-  const service = anon?.ok && anon.row ? null : await readRow(getServiceClient(), query);
+  const service = anon?.ok && anon.row ? null : await readRow(getPublishedFallbackClient(), query);
   return choosePublishedRow(anon, service);
 }
 

@@ -229,7 +229,7 @@ Cerrado en código, pendiente de aplicar en la base y en Vercel:
 
 - [x] DH-SEC-002. El código ya no lee `ADMIN_TOKEN` ni escribe la cookie `dh_admin`. Tras el despliegue hay que borrar `ADMIN_TOKEN` y `ADMIN_TOKEN_TTL_SECONDS` en Vercel.
 - [x] DH-SEC-004, el ritmo. `consume_rate_limit` en Postgres. Envíos, enlace mágico e invitaciones. Si la función no responde, no se envía ni se sube.
-- [x] DH-SEC-007. `import "server-only"` en `lib/db.ts`. La lectura pública usa la clave publishable cuando la policy `published_read` devuelve filas. Hasta entonces repite el filtro `status = published` con `service_role`.
+- [x] DH-SEC-007. `import "server-only"` en `lib/db.ts`. La lectura pública usa la clave publishable cuando la policy `published_read` devuelve filas. Hasta entonces repite el filtro `status = published` con `service_role` en un fetch cacheable (`revalidate: 3600`). El cliente `no-store` no sirve para el prerender.
 - [x] DH-SEC-008. CSP en `proxy.ts` (sin nonce, para no apagar el ISR), HSTS y COOP en `next.config.ts`.
 - [x] DH-SEC-009. `remotePatterns` toma el hostname de `NEXT_PUBLIC_SUPABASE_URL`. Picsum ya no está. Unsplash sigue por el seed.
 - [x] DH-SEC-010. `/api/auth/magic-link` responde el mismo texto de bandeja, esté o no invitado el email.
@@ -431,7 +431,7 @@ Controles que el código y el esquema ya aplican. La evidencia está en el repos
 ## Estado de validación local y de testing
 
 - `npm run lint`, `npm test` y `npm run build` pasan en la revisión del PR #14. La build no necesita secretos reales de Supabase. Con URL y service role de ejemplo, `/` sigue en ISR de una hora.
-- `npm test` pasa 53 pruebas y omite 1 E2E HTTP porque no hay variables `E2E_*`. El archivo `tests/security-controls.test.mjs` cubre el límite de ritmo, el mensaje único del enlace mágico y el cierre de sesión.
+- `npm test` pasa 53 pruebas y omite 1 E2E HTTP porque no hay variables `E2E_*`. El archivo `tests/security-controls.test.mjs` cubre el límite de ritmo, el mensaje único del enlace mágico, el cierre de sesión y el fallback cacheable de la lectura pública.
 - La tabla de rutas vigente está en `docs/Tech/03-frontend-rutas-render.md`. La cifra 19 es anterior a iconos, `robots.txt`, manifiesto y los slugs prerenderizados de `/embed`.
 - Lighthouse local (móvil y escritorio, `next start`) está en `docs/Tech/07-rendimiento.md`.
 - El E2E, cuando se configura, valida autenticación requerida, derechos obligatorios, colaborador desconocido, submission válida, persistencia y limpieza.

@@ -26,8 +26,8 @@ let cached: SupabaseClient | null | undefined;
  * en el corto.
  *
  * Si la policy todavía no está aplicada, `lib/content.ts` repite la misma
- * consulta filtrada con `service_role`. Cuando la publishable devuelve
- * filas, esa clave no interviene.
+ * consulta filtrada con `getPublishedFallbackClient`. Cuando la publishable
+ * devuelve filas, esa clave no interviene.
  */
 let publishedCached: SupabaseClient | null | undefined;
 
@@ -52,6 +52,40 @@ export function getPublishedContentClient(): SupabaseClient | null {
     },
   });
   return publishedCached;
+}
+
+let fallbackCached: SupabaseClient | null | undefined;
+
+/**
+ * La misma lectura publicada, con `service_role` y `revalidate: 3600`.
+ * Mientras no exista la policy `published_read`, la clave publishable
+ * responde 200 y `[]` (RLS sin policy no es un error). Este fallback
+ * tiene que poder correr dentro del prerender. `getServiceClient` no
+ * almacena la respuesta, y en el prerender eso lanza `DynamicServerError`.
+ * Si esa excepción se convierte en “sin filas”, la portada prerenderiza
+ * una lista vacía.
+ */
+export function getPublishedFallbackClient(): SupabaseClient | null {
+  if (fallbackCached !== undefined) return fallbackCached;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    fallbackCached = null;
+    return fallbackCached;
+  }
+
+  fallbackCached = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: (input, init) =>
+        createFetchWithTimeout(supabaseFetchTimeoutMs())(input, {
+          ...init,
+          next: { revalidate: 3600, tags: [PUBLISHED_CONTENT_TAG] },
+        }),
+    },
+  });
+  return fallbackCached;
 }
 
 export function getServiceClient(): SupabaseClient | null {

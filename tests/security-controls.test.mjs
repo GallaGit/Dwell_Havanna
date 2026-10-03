@@ -142,10 +142,22 @@ test("published reads prefer anon rows and keep the service fallback narrow", ()
     [{ slug: "from-service" }],
   );
   assert.deepEqual(choosePublishedRows({ ok: true, rows: [] }, { ok: true, rows: [] }), []);
+  assert.equal(choosePublishedRows({ ok: true, rows: [] }, null), null);
+  assert.equal(choosePublishedRows({ ok: true, rows: [] }, { ok: false }), null);
   assert.equal(choosePublishedRows({ ok: false }, { ok: false }), null);
   assert.equal(choosePublishedRow({ ok: true, row: { slug: "a" } }, { ok: true, row: null })?.slug, "a");
   assert.equal(choosePublishedRow({ ok: true, row: null }, { ok: true, row: null }), null);
+  assert.equal(choosePublishedRow({ ok: true, row: null }, { ok: false }), undefined);
   assert.equal(choosePublishedRow({ ok: false }, { ok: false }), undefined);
+
+  const content = readFileSync(new URL("../lib/content.ts", import.meta.url), "utf8");
+  const db = readFileSync(new URL("../lib/db.ts", import.meta.url), "utf8");
+  assert.match(content, /getPublishedFallbackClient/);
+  assert.equal(content.includes("getServiceClient"), false);
+  const fallback = db.slice(db.indexOf("export function getPublishedFallbackClient"));
+  const service = fallback.indexOf("export function getServiceClient");
+  assert.match(fallback.slice(0, service), /revalidate: 3600/);
+  assert.equal(fallback.slice(0, service).includes('cache: "no-store"'), false);
 });
 
 test("csp, hsts and image hosts stay concrete", () => {

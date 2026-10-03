@@ -42,6 +42,7 @@ export default async function Home() {
           <p className="meta-label">Issue No. 04 — Havana · September 2026</p>
           <p className="meta-label hidden md:block">Photography first</p>
         </div>
+        {featured ? (
         <Link href={`/properties/${featured.slug}`} className="group block">
           <div className="img-editorial aspect-[3/4] sm:aspect-[16/10] md:aspect-[21/10]">
             <Image
@@ -77,6 +78,17 @@ export default async function Home() {
             </div>
           </div>
         </Link>
+        ) : (
+          <div className="border-t rule pt-10">
+            <p className="meta-label mb-3">Featured story</p>
+            <h1 className="font-display text-5xl md:text-7xl leading-[0.95] max-w-4xl">
+              The next issue is <span className="italic font-normal">being edited</span>.
+            </h1>
+            <p className="mt-5 max-w-xl text-[15px] leading-7 text-charcoal/85">
+              Published homes will appear here. The journal and the indexes stay available.
+            </p>
+          </div>
+        )}
       </section>
 
       {/* 2 — Journal */}
