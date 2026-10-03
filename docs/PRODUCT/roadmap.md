@@ -279,27 +279,28 @@ En un proyecto que ya aplicó el SQL viejo, ejecuta solo el paso 5 y después `s
 
 ### Pruebas obligatorias antes de lanzar
 
-- [ ] **Prueba de subida de fotos en `/contribuir` (obligatoria).**
+- [ ] **Prueba de subida de fotos en `/contribuir` (obligatoria).** Hay que hacerla con producción reactivada. El hallazgo del 26-09-2026 sigue abierto en un caso: el post `community-33f1c1ee` («5 esquinas») se veía mal porque el archivo era de 399×501 px y 44 KB. La portada (`app/journal/[slug]/page.tsx`) sigue en `aspect-[16/9]` con `object-cover`, y Next sigue sirviendo esa foto con `quality={70}`.
 
-  Contexto (hallazgo del 26-09-2026): en la primera publicación de prueba (post `community-33f1c1ee`, "5 esquinas") la foto se veía de baja calidad. Causa: el archivo subido era de 399×501 px y 44 KB, sin EXIF (probablemente descargado o ya reducido). La app no comprime al subir: `app/api/submissions/route.ts` guarda los bytes tal cual. La portada del post (`app/journal/[slug]/page.tsx`) usa un contenedor `aspect-[16/9]` casi a todo el ancho con `object-cover`, que amplía y recorta las fotos pequeñas o verticales. Además, Next recomprime a AVIF con `q=70` (`next.config.ts`, `qualities: [70]`).
+  Hecho en el PR #14, ya en `main`:
 
-  Casos a probar. En cada uno, documentar el resultado y el error que ve el usuario:
+  - [x] El navegador deja la foto en JPEG, lado largo ≤ 2560 px y menos de 4 MB, antes del POST. Un JPEG que ya cumple eso no se recomprime. PNG, WebP y HEIC entran si el navegador los decodifica. Si no puede leer el archivo, no hay POST.
+  - [x] El servidor sigue aceptando solo JPEG, sin EXIF, de hasta 4 MB. Un cuerpo de más de 4,5 MB responde `413 body_too_large`.
+  - [x] Ya no hay un tope de 8 MB ni un mensaje que diga que solo se acepta JPEG sin conversión.
 
-  1. JPEG de buena calidad (≥1600 px en el lado mayor, <4 MB): debe publicarse y verse nítido en la portada del post, en la home y en `/journal`.
-  2. JPEG de entre ~4,5 y 8 MB: la UI dice "máx. 8 MB", pero Vercel limita el cuerpo de la función a ~4,5 MB. Comprobar qué error aparece y si se entiende.
-  3. JPEG de más de 8 MB: comprobar el mensaje de validación.
-  4. Foto HEIC de iPhone y PNG: solo se acepta JPEG. Comprobar qué pasa.
-  5. JPEG pequeño (<1000 px): hoy se acepta sin aviso. Comprobar cómo se ve.
-  6. Foto vertical de alta resolución: comprobar el recorte en la portada 16:9.
+  Casos que siguen pendientes. En cada uno, anota el resultado y el texto que ve quien envía:
 
-  Posibles soluciones a evaluar después de la prueba:
+  1. JPEG de buena calidad (lado mayor entre 1600 y 2560 px, menos de 4 MB). Se envía tal cual. Tiene que verse nítido en la portada del post, en la home y en `/journal`.
+  2. JPEG grande (más de 4 MB o lado mayor por encima de 2560 px), y un PNG o WebP grande. El navegador los convierte. El post publicado tiene que verse nítido.
+  3. HEIC de iPhone. Si el navegador lo decodifica, el resultado es el del caso 2. Si no, el formulario avisa y no llama a la API.
+  4. JPEG pequeño (menos de 1000 px), como el de «5 esquinas». Sigue aceptándose sin aviso. Anota cómo se ve ampliado en la portada 16:9.
+  5. Foto vertical de alta resolución. Anota el recorte de `object-cover` en 16:9.
+  6. Un cuerpo por encima de 4,5 MB, si alguien evita el formulario, responde `413`. Una foto que el navegador no logra dejar bajo 4 MB responde con el aviso del formulario y no se envía.
 
-  - Validar una resolución mínima (~1600 px) con un mensaje claro.
-  - Subir directamente a Supabase Storage con URL firmada (`createSignedUploadUrl`) para evitar el límite de 4,5 MB de Vercel, o redimensionar en el cliente a ~2560 px en JPEG con calidad ≈0,85.
-  - Mostrar la portada con la proporción real de la imagen en vez de forzar 16:9.
-  - Usar `qualities: [70, 85]` y `quality={85}` en la portada del post y en el destacado de la home.
-  - Aceptar HEIC y PNG convirtiéndolos a JPEG.
-  - Mostrar mensajes de error claros en cada caso.
+  Sigue sin implementar, y se decide después de esta prueba:
+
+  - Avisar si el lado mayor queda por debajo de unos 1600 px.
+  - Mostrar la portada con la proporción de la foto, en vez de forzar 16:9.
+  - Servir la portada del post y el destacado de la home con una calidad por encima de 70. Hoy `next.config.ts` solo declara `qualities: [70]`.
 
 ## Paso 4: completar el contenido editorial
 
