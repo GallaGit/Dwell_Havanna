@@ -3,7 +3,17 @@ import { cookies } from "next/headers";
 import { revalidatePath, updateTag } from "next/cache";
 import { PUBLISHED_CONTENT_TAG } from "@/lib/db";
 import { redirect } from "next/navigation";
+import { contributorInviteDecision } from "@/lib/contributor-invite.mjs";
+import { resolveInviteOrigin } from "@/lib/site";
 import { getServiceClient } from "@/lib/db";
+import { JpegProcessingError, stripJpegMetadata } from "@/lib/jpeg-metadata";
+import {
+  locateStoredObject,
+  PRIVATE_BUCKET,
+  publishTarget,
+  removalTarget,
+  SIGNED_URL_TTL_SECONDS,
+} from "@/lib/submission-media.mjs";
 import { ModerationDecision } from "./ModerationDecision";
 import {
   canInvite,
@@ -83,6 +93,20 @@ async function decide(formData: FormData): Promise<void> {
   if (!id) return;
 
   if (action === "reject") {
+    const { data: pendingRow } = await db
+      .from("submissions")
+      .select("id,image_url")
+      .eq("id", id)
+      .eq("status", "pending")
+      .maybeSingle();
+    if (!pendingRow) return;
+
+    const target = removalTarget(pendingRow.image_url);
+    if (target) {
+      const { error: removeError } = await db.storage.from(target.bucket).remove([target.path]);
+      if (removeError) return;
+    }
+
     const { data: rejected } = await db
       .from("submissions")
       .update({ status: "rejected" })
@@ -102,6 +126,25 @@ async function decide(formData: FormData): Promise<void> {
       .single();
     if (!sub) return;
 
+    const target = publishTarget(sub.image_url);
+    if (!target) return;
+    const downloaded = await db.storage.from(target.fromBucket).download(target.fromPath);
+    if (downloaded.error || !downloaded.data) return;
+
+    let publishedBytes: Buffer;
+    try {
+      publishedBytes = await stripJpegMetadata(new Uint8Array(await downloaded.data.arrayBuffer()));
+    } catch (error) {
+      if (error instanceof JpegProcessingError) return;
+      return;
+    }
+
+    const { error: uploadError } = await db.storage
+      .from(target.toBucket)
+      .upload(target.toPath, publishedBytes, { contentType: "image/jpeg", upsert: false });
+    if (uploadError) return;
+
+    const { data: publishedUrl } = db.storage.from(target.toBucket).getPublicUrl(target.toPath);
     const firstLine =
       sub.caption_raw.split("\n").find((l: string) => l.trim()) ?? "";
     const slug = `community-${sub.id.slice(0, 8)}`;
@@ -110,23 +153,29 @@ async function decide(formData: FormData): Promise<void> {
       title: firstLine.slice(0, 90) || "Envío de la comunidad",
       category: "Community",
       excerpt: sub.caption_raw.slice(0, 220),
-      image: sub.image_url,
+      image: publishedUrl.publicUrl,
       date_label: new Date().toLocaleDateString("es", { month: "long", year: "numeric" }),
       reading_time: "3 min",
       status: "published",
       published_at: new Date().toISOString(),
     });
-    if (draftError) return;
+    if (draftError) {
+      await db.storage.from(target.toBucket).remove([target.toPath]);
+      return;
+    }
     const { data: approved } = await db
       .from("submissions")
-      .update({ status: "approved" })
+      .update({ status: "approved", image_url: publishedUrl.publicUrl })
       .eq("id", id)
       .eq("status", "pending")
       .select("id")
       .maybeSingle();
-    if (approved) {
-      await recordModerationEvent(db, access, "approve_submission", { submissionId: id });
+    if (!approved) {
+      await db.storage.from(target.toBucket).remove([target.toPath]);
+      return;
     }
+    await db.storage.from(target.fromBucket).remove([target.fromPath]);
+    await recordModerationEvent(db, access, "approve_submission", { submissionId: id });
   }
   revalidatePath("/admin/review");
   if (action === "approve") {
@@ -152,26 +201,35 @@ async function inviteContributor(formData: FormData): Promise<void> {
 
   const { data: contributor } = await db
     .from("verified_contributors")
-    .select("handle")
+    .select("handle, auth_user_id")
     .eq("handle", handle)
     .maybeSingle();
   if (!contributor) {
     adminInviteRedirect("contributor-not-found");
   }
+  if (contributorInviteDecision(contributor.auth_user_id) === "already_linked") {
+    adminInviteRedirect("already-linked");
+  }
 
   const { data: invited, error: inviteError } = await db.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback?next=/contribuir`,
+    redirectTo: `${resolveInviteOrigin(process.env.NEXT_PUBLIC_SITE_URL)}/auth/callback?next=/contribuir`,
   });
   if (inviteError || !invited.user) {
     adminInviteRedirect(inviteError?.code === "email_exists" ? "already-registered" : "send-failed");
   }
 
-  const { error: linkError } = await db
+  const { data: linked, error: linkError } = await db
     .from("verified_contributors")
     .update({ auth_user_id: invited.user.id })
-    .eq("handle", contributor.handle);
+    .eq("handle", contributor.handle)
+    .is("auth_user_id", null)
+    .select("handle")
+    .maybeSingle();
   if (linkError) {
     adminInviteRedirect("link-failed");
+  }
+  if (!linked) {
+    adminInviteRedirect("already-linked");
   }
   await recordModerationEvent(db, access, "invite_contributor", {
     targetHandle: contributor.handle,
@@ -266,7 +324,7 @@ async function inviteEditorialMember(formData: FormData): Promise<void> {
   if (!email || !email.includes("@") || (role !== "owner" && role !== "moderator")) return;
 
   const { data: invited, error } = await db.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback?next=/admin/review`,
+    redirectTo: `${resolveInviteOrigin(process.env.NEXT_PUBLIC_SITE_URL)}/auth/callback?next=/admin/review`,
   });
   if (error || !invited.user) {
     adminInviteRedirect(error?.code === "email_exists" ? "already-registered" : "send-failed");
@@ -361,6 +419,20 @@ export default async function AdminReviewPage({
     .eq("status", "pending")
     .order("created_at", { ascending: true });
   const pending = (data ?? []) as Submission[];
+  const pendingPaths = pending.flatMap((submission) => {
+    const located = locateStoredObject(submission.image_url);
+    if (!located || located.bucket !== PRIVATE_BUCKET) return [];
+    return [located.path];
+  });
+  const signedByPath = new Map<string, string>();
+  if (pendingPaths.length > 0) {
+    const { data: signed } = await db.storage
+      .from(PRIVATE_BUCKET)
+      .createSignedUrls(pendingPaths, SIGNED_URL_TTL_SECONDS);
+    for (const item of signed ?? []) {
+      if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
+    }
+  }
   const ownerAccess = access.kind === "member" && access.member.role === "owner" ? access : null;
   const { data: memberData } = await db
     .from("editorial_members")
@@ -376,7 +448,8 @@ export default async function AdminReviewPage({
         {pending.length === 1 ? "" : "s"}
       </h1>
        <p className="mt-4 max-w-xl text-[15px] leading-7 text-charcoal/85">
-          Aceptar publica el envío en el Journal. Rechazar lo retira de la cola.
+           Aceptar publica el envío en el Journal y hace pública su foto.
+          Rechazar borra el archivo y lo retira de la cola.
           Nada llega a redes sin pasar por aquí.
        </p>
 
@@ -398,6 +471,7 @@ export default async function AdminReviewPage({
            {inviteStatus === "contributor-sent" && "Invitation sent. The contributor must open the email link once. Check spam if it does not arrive."}
            {inviteStatus === "already-registered" && "This email already has a Supabase account or invitation. Do not create a second account; ask the person to use the login page with this email."}
            {inviteStatus === "contributor-not-found" && "That contributor handle is not registered yet. Add it to the verified contributors list before inviting the email."}
+           {inviteStatus === "already-linked" && "This handle is already linked to an account. Re-inviting does not replace that link. Ask the person to sign in, or revoke the link in a separate step."}
            {inviteStatus === "send-failed" && "The invitation could not be sent. Confirm the email, Supabase email configuration, and that the address is not already registered."}
            {inviteStatus === "link-failed" && "The email was sent, but the contributor link could not be saved. Do not resend until the account link is checked."}
            {inviteStatus === "member-link-failed" && "The email was sent, but the editorial role could not be saved. Check the team list before sending another invitation."}
@@ -409,6 +483,7 @@ export default async function AdminReviewPage({
            <p className="meta-label mb-2">Invitar colaborador</p>
            <p className="text-sm leading-6 text-charcoal/85 mb-4">
              El handle debe existir previamente en la lista de colaboradores. No hay registro público.
+             Si el handle ya tiene una cuenta vinculada, la invitación no la sustituye.
            </p>
            <form action={inviteContributor} className="flex flex-col gap-3">
              <label htmlFor="contributor-handle" className="meta-label">Handle</label>
@@ -491,17 +566,24 @@ export default async function AdminReviewPage({
       )}
 
       <div className="mt-10 flex flex-col gap-10">
-        {pending.map((s) => (
+        {pending.map((s) => {
+          const located = locateStoredObject(s.image_url);
+          const previewUrl = located ? signedByPath.get(located.path) : undefined;
+          return (
           <article key={s.id} className="border-t rule pt-6 grid md:grid-cols-12 gap-6">
             <div className="md:col-span-4">
               <div className="img-editorial aspect-[4/3] relative">
-                <Image
-                  src={s.image_url}
-                  alt={`Envío de ${s.author_handle}`}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-cover"
-                />
+                {previewUrl ? (
+                  <Image
+                    src={previewUrl}
+                    alt={`Envío de ${s.author_handle}`}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover"
+                  />
+                ) : (
+                  <p className="p-4 text-sm leading-6 text-charcoal/85">La foto no está disponible.</p>
+                )}
               </div>
             </div>
             <div className="md:col-span-8">
@@ -518,7 +600,8 @@ export default async function AdminReviewPage({
               </div>
             </div>
           </article>
-        ))}
+          );
+        })}
         {pending.length === 0 && (
           <p className="text-[15px] text-charcoal/85">
             Cola vacía. Cuando un colaborador verificado envíe por /contribuir,

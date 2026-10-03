@@ -1,8 +1,13 @@
 -- Dwell Havana — Fase 1: schema canónico
 -- Aplicar en Supabase Dashboard → SQL Editor, en este orden:
 --   1) 01-schema.sql (este archivo)
---   2) 02-seed.sql (contenido inicial migrado desde site/lib/data.ts)
--- Bucket público `dwell-media` para covers/galerías (lectura pública, escritura solo service_role).
+--   2) 03-contributor-auth.sql
+--   3) 04-editorial-permissions.sql
+--   4) migrations/20260921000300_editorial_member_management.sql
+--   5) migrations/20261003150500_private_dwell_media.sql
+--   6) 02-seed.sql (opcional)
+-- El orden vivo está en scripts/apply-canonical-sql.sh.
+-- dwell-media es privado. Las fotos publicadas van a dwell-published.
 
 -- ── Propiedades (espejo de type Property en lib/data.ts + workflow) ──
 create table if not exists properties (
@@ -91,13 +96,31 @@ alter table verified_contributors enable row level security;
 alter table submissions enable row level security;
 alter table syndications enable row level security;
 
--- ── Storage público para medios ──
+-- ── Storage ──
+-- Un bucket público sirve cualquier objeto cuya URL se conozca: el flag
+-- `public` no respeta prefijos. Los envíos sin moderar van a `dwell-media`
+-- (privado, sin policy de SELECT). Al aprobar, el servidor copia el JPEG a
+-- `dwell-published`, que sí es público y solo recibe esa copia.
+--
+-- INSERT ... ON CONFLICT DO NOTHING no cambia `public` si el bucket ya
+-- existía como público. El DO UPDATE y el UPDATE de abajo sí lo dejan privado.
+
 insert into storage.buckets (id, name, public)
-values ('dwell-media', 'dwell-media', true)
-on conflict (id) do nothing;
+values ('dwell-media', 'dwell-media', false)
+on conflict (id) do update
+  set public = false;
+
+update storage.buckets
+set public = false
+where id = 'dwell-media';
+
+insert into storage.buckets (id, name, public)
+values ('dwell-published', 'dwell-published', true)
+on conflict (id) do update
+  set public = true;
 
 drop policy if exists "dwell-media public read" on storage.objects;
-create policy "dwell-media public read"
-  on storage.objects for select
-  using (bucket_id = 'dwell-media');
--- Escritura: solo service_role (default, sin policy de insert pública).
+drop policy if exists "dwell-media published read" on storage.objects;
+-- Sin policy de SELECT: anon no lista el inventario. dwell-published, al ser
+-- público, igual responde la URL concreta de una foto ya aprobada.
+-- Escritura: solo service_role (sin policy de INSERT).

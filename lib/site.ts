@@ -1,16 +1,26 @@
-/**
- * URL canónica del sitio.
- * Configurar NEXT_PUBLIC_SITE_URL en producción (ej. https://dwellhavana.com).
- * Un valor vacío, solo espacios o que no sea una URL http(s) absoluta
- * usa el dominio por defecto: `new URL("")` rompe el build.
- */
 import {
   DEFAULT_SITE_URL,
+  LOCAL_INVITE_ORIGIN,
+  resolveInviteOrigin,
   resolveSiteUrl,
   siteUrl,
 } from "./site-url.mjs";
 
-export { DEFAULT_SITE_URL, resolveSiteUrl, siteUrl };
+/**
+ * URL canónica del sitio.
+ * En Vercel, NEXT_PUBLIC_SITE_URL es https://dwell-havanna.vercel.app.
+ * dwellhavana.com es el dominio siguiente y todavía no está conectado.
+ * Un valor vacío, solo espacios o que no sea una URL http(s) absoluta
+ * usa la web pública: `new URL("")` rompe el build.
+ */
+
+export {
+  DEFAULT_SITE_URL,
+  LOCAL_INVITE_ORIGIN,
+  resolveInviteOrigin,
+  resolveSiteUrl,
+  siteUrl,
+};
 
 export const siteName = "Dwell Havana";
 

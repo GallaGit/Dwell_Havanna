@@ -17,8 +17,8 @@ export function ModerationDecision({
   const isApproval = action === "approve";
   const title = isApproval ? "Publicar este envío?" : "Rechazar este envío?";
   const description = isApproval
-    ? "Se publicará ahora en el Journal y aparecerá en el frontend."
-    : "El envío dejará de estar en la cola pendiente y no aparecerá en el frontend.";
+    ? "Se publicará ahora en el Journal. La foto pasa a una URL pública; hasta ahora solo se ve en este panel."
+    : "El envío saldrá de la cola y se borrará su archivo. No aparecerá en el sitio.";
 
   return (
     <>

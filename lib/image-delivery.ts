@@ -7,7 +7,7 @@ export const DELIVERY_IMAGE_QUALITY = 70;
 
 /**
  * URL pública ya pasada por el optimizador de Next.
- * OG, RSS y embed no usan next/image: sin esto, un JPEG de hasta 8 MB
+ * OG, RSS y embed no usan next/image: sin esto, el JPEG publicado
  * saldría tal cual desde Storage.
  * El origen es `siteUrl` (`lib/site-url.mjs`, reexportado en `lib/site.ts`).
  */

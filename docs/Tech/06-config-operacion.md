@@ -10,7 +10,7 @@ Copiar `.env.example` → `.env.local` (gitignoreado, nunca commitear).
 
 | Var | Expuesta al navegador | Dónde se usa |
 |---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | Sí | `lib/site.ts` (OG, sitemap, feed, embeds). También `redirectTo` de las invitaciones Auth. Si falta, está vacía o no es una URL `http(s)` válida, el sitio canónico usa `https://dwellhavana.com`. Las invitaciones usan `http://localhost:3000` solo cuando la variable no está definida |
+| `NEXT_PUBLIC_SITE_URL` | Sí | `lib/site.ts` (OG, sitemap, feed, embeds) y `redirectTo` de las invitaciones Auth. La web pública es `https://dwell-havanna.vercel.app` y en Vercel la variable ya vale eso. Si falta, está vacía o no es una URL `http(s)` válida, la canónica usa esa misma web. Las invitaciones usan `http://localhost:3000` si la variable falta o está vacía. `dwellhavana.com` es el dominio siguiente y todavía no está conectado |
 | `NEXT_PUBLIC_SUPABASE_URL` | Sí | `lib/db.ts` y el cliente Auth |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sí | Supabase Auth en el navegador y cookies SSR |
 | `SUPABASE_SERVICE_ROLE_KEY` | **No, solo server** | `lib/db.ts`, API submissions, admin e invitaciones |
@@ -57,7 +57,7 @@ scripts/apply-canonical-sql.sh --with-seed
 
 `scripts/apply-canonical-sql.sh --apply` exige `DATABASE_URL` y `psql`. Si la URL contiene el ref de producción `sfujmwumtzuzwwhfmyxa`, el script se niega salvo `--allow-production`. No lo ejecutes contra producción desde un agente. El alta del primer `owner` queda fuera del script, con el `auth_user_id` real.
 
-Verificación de esta preparación: `lint`, `test` (17 pasan, 1 E2E omitido) y `build`. El detalle de Lighthouse está en `docs/Tech/07-rendimiento.md`.
+Verificación de esta preparación: `lint`, `test` (32 pasan, 1 E2E omitido) y `build`. El detalle de Lighthouse está en `docs/Tech/07-rendimiento.md`.
 
 ## Activación (lado humano)
 
@@ -69,10 +69,50 @@ Orden SQL de un proyecto de producción, en el SQL Editor:
 2. `supabase/03-contributor-auth.sql`
 3. `supabase/04-editorial-permissions.sql`
 4. `supabase/migrations/20260921000300_editorial_member_management.sql`
-5. `supabase/02-seed.sql`, solo si se quiere el contenido de ejemplo
-6. Alta del primer `owner` en `editorial_members` con su `auth_user_id`
+5. `supabase/migrations/20261003150500_private_dwell_media.sql`
+6. `supabase/02-seed.sql`, solo si se quiere el contenido de ejemplo
+7. Alta del primer `owner` en `editorial_members` con su `auth_user_id`
 
-El 2026-09-15 el proyecto `sfujmwumtzuzwwhfmyxa` ya tenía el esquema inicial, el seed, colaboradores y el bucket `dwell-media`. Ese proyecto ahora no resuelve. Esas piezas quedan a re-verificar.
+El 2026-09-15 el proyecto `sfujmwumtzuzwwhfmyxa` ya tenía el esquema inicial, el seed, colaboradores y el bucket `dwell-media` **público**. Ese proyecto ahora no resuelve. Esas piezas quedan a re-verificar. No vuelvas a dejar el bucket público: el `INSERT ... ON CONFLICT DO NOTHING` antiguo no cambiaba el flag, y `20261003150500_private_dwell_media.sql` sí hace `UPDATE ... SET public = false`.
+
+## Reactivar producción con el bucket privado
+
+No hace falta ninguna variable nueva en Vercel ni en Supabase. `SUPABASE_SERVICE_ROLE_KEY` sigue siendo la que firma las URLs del panel y la que copia la foto al bucket público.
+
+Si el proyecto ya tenía el SQL anterior, no reapliques `01-schema.sql`. En el SQL Editor ejecuta solo `supabase/migrations/20261003150500_private_dwell_media.sql`. En un proyecto vacío usa el orden completo de arriba: el paso 5 repite el cierre del bucket y es idempotente.
+
+Ese SQL no mueve archivos. Hasta que no corras el script de objetos, las fotos aprobadas siguen en `dwell-media/submissions/<handle>/<uuid>.jpg` y dejan de ser descargables, porque el bucket pasa a privado.
+
+1. Reactiva el proyecto Supabase.
+2. Aplica el SQL del párrafo anterior.
+3. Revisa el plan, sin escribir:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
+  node --experimental-strip-types scripts/migrate-dwell-media-objects.mjs
+```
+
+4. Si el plan es el esperado, repite con `--apply`. El ref `sfujmwumtzuzwwhfmyxa` exige además `--allow-production`.
+5. Despliega esta revisión de la app.
+
+Qué hace `--apply` con cada fila de `submissions`:
+
+| Estado | Ruta vieja | Qué pasa |
+|---|---|---|
+| `pending` | `dwell-media/submissions/<handle>/<uuid>.jpg` | Se mueve a `dwell-media/submissions/<uuid>.jpg`. `image_url` pasa a ser esa ruta. Sigue privada. |
+| `approved` | la misma, u otra URL de `dwell-media` | Se reencodea sin EXIF y se sube a `dwell-published/<uuid>.jpg`. Se actualizan `submissions.image_url` y el `journal_posts.image` que aún apunte a la URL vieja o al slug `community-<8 primeros del id>`. Se borra el original. |
+| `rejected` | objeto aún en `dwell-media` | Se borra el archivo. La fila se queda. |
+| ya migrado | `submissions/<uuid>.jpg` o `dwell-published/<uuid>.jpg` | No se toca. |
+
+El handle sale de la ruta. El UUID del archivo se conserva, así que la pieza publicada cambia de bucket y de prefijo, no de nombre de fichero.
+
+Comprueba, con la clave publishable y sin sesión:
+
+- `GET` de una URL antigua `/object/public/dwell-media/submissions/...` no devuelve la foto.
+- El panel, con sesión editorial, muestra la pendiente: la etiqueta `img` apunta a `/storage/v1/object/sign/dwell-media/...`, no a `/object/public/`.
+- Rechazar un envío de prueba borra el objeto en Storage.
+- Aprobar otro deja un JPEG en `dwell-published` y el post del Journal carga esa URL.
+- Un JPEG de más de 4 MB recibe `422 photo_too_large`. Un cuerpo de más de 4,5 MB recibe `413 body_too_large`.
 
 Después del SQL:
 
@@ -112,7 +152,7 @@ Cuando exista el proyecto, configura las mismas claves de `.env.example`. `SUPAB
 - `POST /api/submissions` exige una sesión Supabase Auth y comprueba que el usuario esté vinculado al handle enviado mediante `verified_contributors.auth_user_id`.
 - La columna y el índice de vínculo se crean con `supabase/03-contributor-auth.sql` si el proyecto ya ejecutó el esquema inicial.
 - El E2E HTTP se activa solo con variables `E2E_*` de un proyecto de testing dedicado; `E2E_AUTH_COOKIE` representa la sesión de un colaborador invitado y nunca debe apuntar a producción.
-- RLS sin policies + bucket escritura solo `service_role` (ver `04`).
-- Solo JPEG ≤8MB, `rights_granted` obligatorio, allowlist estricta, limpieza de huérfanos en API.
+- RLS sin policies. `dwell-media` es privado y no tiene policy de `SELECT`. `dwell-published` es público y solo recibe la copia aprobada. La escritura de ambos es solo `service_role` (ver `04`).
+- Solo JPEG de hasta 4 MB, sin EXIF, `rights_granted` obligatorio, allowlist estricta, limpieza de huérfanos en API. Un cuerpo por encima de 4,5 MB se rechaza antes de leerlo entero. El formulario reduce la foto antes del POST; el servidor mantiene estos topes.
 - Free tier estimado: ~200 fotos ≈ 60MB, sobra para arranque.
 - `ADMIN_TOKEN` queda como fallback temporal hasta validar el primer `owner` en producción. Su cookie expira por defecto en 7 días y puede ajustarse con `ADMIN_TOKEN_TTL_SECONDS`; revocar el token requiere cambiar el secreto.

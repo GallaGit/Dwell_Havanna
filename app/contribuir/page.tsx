@@ -2,9 +2,15 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import {
+  PreparePhotoError,
+  prepareSubmissionPhoto,
+} from "@/lib/prepare-submission-photo-browser";
+import { MAX_LONG_EDGE } from "@/lib/prepare-submission-photo.mjs";
 
 type State =
   | { kind: "idle" }
+  | { kind: "preparing" }
   | { kind: "sending" }
   | { kind: "done" }
   | { kind: "error"; message: string };
@@ -13,8 +19,13 @@ const FRIENDLY: Record<string, string> = {
   handle_and_caption_required: "Your handle and story are required.",
   rights_required: "You must grant publishing rights before sending.",
   photo_required: "Attach a photo.",
-  photo_must_be_jpeg: "JPEG files only (.jpg). Convert the photo and try again.",
-  photo_too_large_8mb: "The photo is larger than 8 MB. Reduce its size and try again.",
+  photo_must_be_jpeg: "The server only accepted a JPEG. Export the photo as JPEG and try again.",
+  photo_too_large: "The photo is still larger than 4 MB after preparation. Try a different image.",
+  photo_dimensions: "The photo has more pixels than the server accepts. Try a different image.",
+  body_too_large: "The upload is larger than 4.5 MB, which the host rejects. Try a different image.",
+  photo_unreadable:
+    "This browser could not read that photo. Export it as JPEG, PNG or WebP and try again.",
+  photo_still_too_large: "This photo could not be reduced under 4 MB. Try a different image.",
   unknown_contributor:
     "Your account is not linked to that contributor. Contact us to review your invitation.",
   authentication_required: "Sign in with your invitation before sending.",
@@ -25,22 +36,45 @@ const FRIENDLY: Record<string, string> = {
   bad_form: "Invalid form.",
 };
 
+function prepareFailureMessage(error: unknown): string {
+  if (error instanceof PreparePhotoError) return FRIENDLY[error.code];
+  return FRIENDLY.photo_unreadable;
+}
+
 export default function ContribuirPage() {
   const [state, setState] = useState<State>({ kind: "idle" });
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const form = e.currentTarget;
+    const body = new FormData(form);
+    const photo = body.get("photo");
+    if (!(photo instanceof File) || photo.size < 1) {
+      setState({ kind: "error", message: FRIENDLY.photo_required });
+      return;
+    }
+
+    setState({ kind: "preparing" });
+    let prepared: File;
+    try {
+      prepared = await prepareSubmissionPhoto(photo);
+    } catch (error) {
+      setState({ kind: "error", message: prepareFailureMessage(error) });
+      return;
+    }
+    body.set("photo", prepared);
+
     setState({ kind: "sending" });
     const res = await fetch("/api/submissions", {
       method: "POST",
-      body: new FormData(e.currentTarget),
+      body,
     });
     const json = (await res.json().catch(() => null)) as {
       ok: boolean;
       error?: string;
     } | null;
     if (json?.ok) {
-      (e.target as HTMLFormElement).reset();
+      form.reset();
       setState({ kind: "done" });
     } else {
       setState({
@@ -108,14 +142,21 @@ export default function ContribuirPage() {
         </label>
 
         <label className="flex flex-col gap-2">
-           <span className="meta-label">Photo — JPEG, max. 8 MB</span>
+           <span className="meta-label">Photo</span>
           <input
             name="photo"
             type="file"
             required
-            accept="image/jpeg,.jpg,.jpeg"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
+            aria-describedby="photo-hint"
             className="text-sm text-charcoal/85 file:mr-4 file:border file:border-ink file:bg-transparent file:px-4 file:py-2 file:text-[13px] hover:file:bg-ink hover:file:text-paper file:transition-colors"
           />
+          <span id="photo-hint" className="text-sm leading-6 text-charcoal/85">
+            JPEG, PNG, WebP or HEIC. A large photo is resized here, before it is
+            sent: long side at most {MAX_LONG_EDGE} px, JPEG under 4 MB. A JPEG
+            that already fits is sent unchanged. If this browser cannot read the
+            file, the form says so.
+          </span>
         </label>
 
         <label className="flex items-start gap-3 text-sm leading-6 text-charcoal/85">
@@ -128,11 +169,21 @@ export default function ContribuirPage() {
 
         <button
           type="submit"
-          disabled={state.kind === "sending"}
+          disabled={state.kind === "preparing" || state.kind === "sending"}
+          aria-busy={state.kind === "preparing" || state.kind === "sending"}
           className="inline-flex w-fit text-sm bg-ink text-paper px-7 py-3 hover:opacity-80 transition disabled:opacity-50"
         >
-          {state.kind === "sending" ? "Sending…" : "Send for review"}
+          {state.kind === "preparing"
+            ? "Preparando foto…"
+            : state.kind === "sending"
+              ? "Sending…"
+              : "Send for review"}
         </button>
+        {state.kind === "preparing" && (
+          <p role="status" className="text-sm leading-6">
+            Preparando foto…
+          </p>
+        )}
 
         {state.kind === "done" && (
           <p role="status" className="border border-ink p-4 text-sm leading-6">

@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEFAULT_SITE_URL, canonicalFor, resolveSiteUrl, siteUrl } from "../lib/site.ts";
+import {
+  DEFAULT_SITE_URL,
+  LOCAL_INVITE_ORIGIN,
+  canonicalFor,
+  resolveInviteOrigin,
+  resolveSiteUrl,
+  siteUrl,
+} from "../lib/site.ts";
+
+test("the public default is the Vercel site, not the future domain", () => {
+  assert.equal(DEFAULT_SITE_URL, "https://dwell-havanna.vercel.app");
+});
 
 test("unset site url uses the default and does not warn", () => {
   const warnings = [];
@@ -51,4 +62,20 @@ test("a valid site url is preserved and trailing slashes are removed", () => {
   assert.equal(resolveSiteUrl("http://localhost:3000/", warn), "http://localhost:3000");
   assert.equal(warnings.length, 0);
   assert.equal(canonicalFor("journal/light-in-vedado").startsWith(siteUrl), true);
+});
+
+test("invites stay on localhost when the site url is missing or blank", () => {
+  const warnings = [];
+  const warn = (message) => warnings.push(message);
+  assert.equal(resolveInviteOrigin(undefined, warn), LOCAL_INVITE_ORIGIN);
+  assert.equal(resolveInviteOrigin(null, warn), LOCAL_INVITE_ORIGIN);
+  assert.equal(resolveInviteOrigin("", warn), LOCAL_INVITE_ORIGIN);
+  assert.equal(resolveInviteOrigin("   ", warn), LOCAL_INVITE_ORIGIN);
+  assert.equal(warnings.length, 0);
+  assert.equal(
+    resolveInviteOrigin("https://dwell-havanna.vercel.app/", warn),
+    "https://dwell-havanna.vercel.app",
+  );
+  assert.equal(resolveInviteOrigin("not a url", warn), DEFAULT_SITE_URL);
+  assert.equal(warnings.length, 1);
 });

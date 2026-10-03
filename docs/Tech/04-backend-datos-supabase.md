@@ -15,11 +15,11 @@ Toda lectura pública pasa por `lib/content.ts`. Si hay Supabase configurado lee
 | `lib/db.ts` | `getPublishedContentClient()`, `getServiceClient()` | El primero usa `fetch` con `revalidate: 3600` y el tag `published-content`. El segundo sigue en `cache: "no-store"` para la cola y las mutaciones. Ambos devuelven `null` si faltan la URL o la service role. **Nunca importar desde cliente.** |
 | `lib/content.ts` | `listPublishedProperties()`, `getPropertyBySlug()`, `listPublishedPosts()`, `getPostBySlug()` | Envueltos en `cache()`. El slug consulta `.eq("slug")`. Si la query falla, cae a `lib/data.ts`. Si la query responde y no hay fila, devuelve `undefined`. El cuerpo del post es el placeholder de `lib/placeholders.ts`. |
 | `lib/data.ts` | `Property`, `JournalPost`, `properties[3]`, `journalPosts[4]` | Las URLs de foto salen de `lib/placeholders.ts`. |
-| `lib/site.ts` | `siteUrl`, `canonicalFor(path)`, `resolveSiteUrl()` | `NEXT_PUBLIC_SITE_URL` si es una URL `http(s)` absoluta. Si falta, está vacía, es solo espacios o no es válida, `https://dwellhavana.com`. Se quitan las barras finales. Un valor inválido avisa en el build. Usado en OG, sitemap, feed, embed. |
+| `lib/site.ts` | `siteUrl`, `canonicalFor(path)`, `resolveSiteUrl()`, `resolveInviteOrigin()` | `NEXT_PUBLIC_SITE_URL` si es una URL `http(s)` absoluta. Si falta, está vacía, es solo espacios o no es válida, `https://dwell-havanna.vercel.app`. Se quitan las barras finales. Un valor inválido avisa en el build. Usado en OG, sitemap, feed, embed. Las invitaciones usan `http://localhost:3000` si la variable falta o está vacía. |
 
 ## Schema (`supabase/01-schema.sql`)
 
-El orden en el SQL Editor es el de `docs/PRODUCT/roadmap.md` (Paso 2) y `docs/Tech/06-config-operacion.md`: `supabase/01-schema.sql`, `supabase/03-contributor-auth.sql`, `supabase/04-editorial-permissions.sql`, `supabase/migrations/20260921000300_editorial_member_management.sql`, `supabase/02-seed.sql` solo si se quiere el ejemplo, y el alta del primer `owner` en `editorial_members`.
+El orden en el SQL Editor es el de `docs/PRODUCT/roadmap.md` (Paso 2) y `docs/Tech/06-config-operacion.md`: `supabase/01-schema.sql`, `supabase/03-contributor-auth.sql`, `supabase/04-editorial-permissions.sql`, `supabase/migrations/20260921000300_editorial_member_management.sql`, `supabase/migrations/20261003150500_private_dwell_media.sql`, `supabase/02-seed.sql` solo si se quiere el ejemplo, y el alta del primer `owner` en `editorial_members`.
 
 | Tabla | Clave | Campos relevantes |
 |---|---|---|
@@ -32,12 +32,13 @@ El orden en el SQL Editor es el de `docs/PRODUCT/roadmap.md` (Paso 2) y `docs/Te
 Las migraciones `supabase/migrations/20260921000100_contributor_auth.sql`,
 `supabase/migrations/20260921000200_editorial_permissions.sql` y
 `supabase/migrations/20260921000300_editorial_member_management.sql` añaden el vínculo
-con Supabase Auth, `editorial_members` y `moderation_events`, y amplían las acciones de auditoría. El servidor consulta
-el miembro activo con `auth_user_id`, `role` y `active`. No usa `user_metadata`.
+con Supabase Auth, `editorial_members` y `moderation_events`, y amplían las acciones de auditoría.
+`supabase/migrations/20261003150500_private_dwell_media.sql` deja el bucket privado.
+El servidor consulta el miembro activo con `auth_user_id`, `role` y `active`. No usa `user_metadata`.
 
-Testing tiene las tres migraciones aplicadas y un `owner` activo, distinto del colaborador E2E. Producción no tiene aplicadas estas migraciones.
+Testing tiene las tres migraciones editoriales aplicadas y un `owner` activo, distinto del colaborador E2E. Producción no tiene aplicadas estas migraciones ni el cierre del bucket.
 
-Seguridad: `RLS enabled` en las 5 tablas iniciales y también en `editorial_members` y `moderation_events`, **sin policies** de lectura pública. `anon` y `authenticated` no leen esas filas. Las operaciones privilegiadas van por `service_role`. La API valida además la sesión Supabase Auth y el vínculo `auth_user_id`. Storage: bucket `dwell-media` público-lectura (`policy select where bucket_id='dwell-media'`), escritura solo `service_role`.
+Seguridad: `RLS enabled` en las 5 tablas iniciales y también en `editorial_members` y `moderation_events`, **sin policies** de lectura pública. `anon` y `authenticated` no leen esas filas. Las operaciones privilegiadas van por `service_role`. La API valida además la sesión Supabase Auth y el vínculo `auth_user_id`. Storage: `dwell-media` es privado y no tiene policy de `SELECT`. Los envíos pendientes viven ahí, en `submissions/<uuid>.jpg`, sin el handle en la ruta. El panel los muestra con una URL firmada de 15 minutos. Al aprobar, el servidor copia el JPEG a `dwell-published/<uuid>.jpg` y guarda esa URL pública. Al rechazar, borra el objeto. La escritura de ambos buckets sigue solo con `service_role`.
 
 ## Seed (`supabase/02-seed.sql`)
 
@@ -45,5 +46,8 @@ Migra los 3 properties + 4 posts de `data.ts` con `status='published'`, `on conf
 
 ## Medios
 
-- Original en `submissions/<handle>/<uuid>.jpg`; variantes WebP/AVIF responsive las genera `next/image` al servir.
-- `next.config.ts` ya permite `*.supabase.co`.
+- Envío pendiente: `dwell-media/submissions/<uuid>.jpg`. La columna `image_url` guarda esa ruta, no una URL pública. El handle no forma parte del path.
+- Envío aprobado: `dwell-published/<uuid>.jpg`. `journal_posts.image` y `submissions.image_url` pasan a la URL pública de ese objeto. `next/image` sigue generando WebP/AVIF al servir.
+- Un bucket público de Supabase sirve cualquier objeto cuya URL se conozca. Por eso lo publicado no es un prefijo de `dwell-media`: es otro bucket, y el privado no tiene policy de lectura.
+- `next.config.ts` permite `*.supabase.co`.
+- El formulario prepara la foto en el navegador (lado largo ≤ 2560 px, JPEG ≤ 4 MB) y no recomprime un JPEG que ya cabe. Eso no sustituye al servidor. El JPEG se reencodea otra vez antes de guardarlo: se aplica la orientación EXIF y no se escriben GPS ni otros metadatos. El tope de la foto sigue en 4 MB. Vercel corta el cuerpo de la función hacia 4,5 MB; un `Content-Length` por encima de eso responde 413 sin leer el resto.
