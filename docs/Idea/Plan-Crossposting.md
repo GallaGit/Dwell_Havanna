@@ -16,7 +16,7 @@ Decisiones aprobadas por el usuario (2026-09-15):
 
 ## 1. Estado actual (punto de partida real)
 
-- App en la raíz del repositorio: Next 16.3.5 + React 19 + Tailwind 4. Rutas: `/`, `/properties`, `/properties/[slug]`, `/journal`, `/journal/[slug]`, `/about`.
+- App en la raíz del repositorio: Next 16.3.8 + React 19 + Tailwind 4. Rutas: `/`, `/properties`, `/properties/[slug]`, `/journal`, `/journal/[slug]`, `/about`.
 - Contenido estático en `lib/data.ts`: tipos `Property` y `JournalPost`, arrays `properties` (3), `journalPosts` (4), helpers `getProperty`, `getPost`. Imágenes vía helper `img()` a `images.unsplash.com`.
 - Render: `app/page.tsx` (portada revista), `components/Editorial.tsx` (`SectionHeading`, `PropertyEntry`, `JournalEntry`), detalles con `generateStaticParams()`.
 - `next.config.ts`: `images.remotePatterns` solo permite `images.unsplash.com` y `picsum.photos`. Habrá que añadir el futuro Storage (Supabase) + CDN de Meta.
@@ -95,7 +95,7 @@ create table syndications (
 );
 ```
 
-Storage: bucket `dwell-media` público-lectura. Añadir su hostname a `next.config.ts → images.remotePatterns`. Regla: solo JPEG ≤ 8MB, ratio 4:5 (IG retrato) + 16:9 (web hero) generados al subir.
+Storage: los envíos sin moderar van al bucket privado `dwell-media`. Meta tiene que poder descargar la copia ya publicada en `dwell-published` (`/object/public/dwell-published/<uuid>.jpg`). Una URL firmada corta o una ruta de `dwell-media` falla en el cURL de Meta. `next.config.ts → images.remotePatterns` ya acepta `*.supabase.co`. Regla de ingesta: JPEG ≤ 4 MB, sin EXIF.
 
 ### 3.2 Capa de datos en Next (migración sin romper UI)
 
@@ -138,7 +138,7 @@ No requiere código aún, pero bloquea todo lo automático. Responsable: dueña 
 - [ ] Permisos a solicitar: `instagram_basic`, `instagram_content_publish`, `pages_read_engagement` (+ `ads_management` o `ads_read` si el rol viene vía Business Manager).
 - [ ] Pasar App Review a **Advanced Access** para esos permisos. En modo dev solo funciona con usuarios test.
 - [ ] Generar **Page access token de larga duración** (~60 días) + job de refresco. Guardar en secrets, nunca en cliente.
-- [ ] Preparar host público de imágenes (el bucket Supabase del §3.1): Meta hace cURL a `image_url` en el momento de crear el container. URL firmada corta o privada = error.
+- [ ] Preparar host público de imágenes (`dwell-published`, no el bucket privado de la cola): Meta hace cURL a `image_url` en el momento de crear el container. URL firmada corta o privada = error.
 - [ ] Validar límites: JPEG solo, 1 container expira en 24h si no se publica, tope ~50-100 `media_publish`/24h. Para Dwell Havana (2-3 posts/semana) sobra.
 - [ ] Secuencia API a implementar en Fase 2: `POST /{ig-id}/media?image_url=&caption=&alt_text=` → poll `GET /{container-id}?fields=status_code` hasta `FINISHED` → `POST /{ig-id}/media_publish?creation_id=` → guardar `external_id` en `syndications`. FB Page post similar vía `/{page-id}/feed` o `/photos`.
 

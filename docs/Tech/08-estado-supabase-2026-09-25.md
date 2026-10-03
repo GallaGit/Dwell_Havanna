@@ -1,10 +1,16 @@
 # 08 — Estado de Supabase al 2026-09-25
 
-Lectura de producción y de testing el 2026-09-25. El procedimiento para aplicar el SQL está en `docs/Tech/06-config-operacion.md`. Los archivos ejecutados en producción están en `supabase/prod-applied/2026-09-25/`.
+Lectura de producción y de testing el 2026-09-25. Los archivos ejecutados aquel día están en `supabase/prod-applied/2026-09-25/`. El CLI no lee esa carpeta. El procedimiento para reactivar está en `docs/Tech/06-config-operacion.md`, sección «Reactivar producción con el bucket privado».
+
+## Estado al 2026-10-03
+
+Producción `sfujmwumtzuzwwhfmyxa` (Dwell_Havanna_DB) y testing `ypeizxnafipvojpntsaw` están pausados desde el 2026-10-03. Lo de abajo es la lectura del 2026-09-25, antes de la pausa. No se ha vuelto a consultar.
+
+Al reactivar producción no reapliques el SQL de aquel día. Aplica solo `supabase/migrations/20261003150500_private_dwell_media.sql` y después `scripts/migrate-dwell-media-objects.mjs`. El bucket `dwell-media` de esta lectura era público. El PR #14 lo deja privado y publica la copia aprobada en `dwell-published`. Esa migración todavía no está aplicada, porque el proyecto está pausado.
 
 ## Producción
 
-Proyecto `sfujmwumtzuzwwhfmyxa`, nombre Dwell_Havanna_DB, organización `oxfilxdghpzkqyvtjkiy`, región `ca-central-1`. Activo.
+Proyecto `sfujmwumtzuzwwhfmyxa`, nombre Dwell_Havanna_DB, organización `oxfilxdghpzkqyvtjkiy`, región `ca-central-1`. El 2026-09-25 estaba activo. Desde el 2026-10-03 está pausado.
 
 Antes del 2026-09-25 la base tenía el esquema anterior a `03-contributor-auth`: cinco tablas, `verified_contributors` sin `auth_user_id`, el seed del 2026-09-15 (3 `properties` y 4 `journal_posts`, todas `published`) y 2 colaboradores de prueba de Instagram.
 
@@ -31,7 +37,7 @@ Siete tablas, todas con RLS y cero policies: `properties`, `journal_posts`, `ver
 
 `verified_contributors.auth_user_id` es `uuid` con `UNIQUE`. En producción la columna quedó la última, porque se añadió con `ALTER TABLE`. Hay 14 índices. El check `moderation_events_action_check` admite 6 acciones: `invite_contributor`, `approve_submission`, `reject_submission`, `invite_editorial_member`, `change_editorial_role`, `change_editorial_status`.
 
-Bucket `dwell-media`, público, con la policy `dwell-media public read`. Cero objetos.
+Bucket `dwell-media`, público aquel día, con la policy `dwell-media public read`. Cero objetos. Ese no es el estado deseado: al reactivar, la migración del PR #14 lo deja privado.
 
 | Tabla o sistema | Filas |
 |---|---|
@@ -68,7 +74,7 @@ La única diferencia de esquema con producción es el orden de `verified_contrib
 | `moderation_events` | 3 |
 | Post de comunidad en `journal_posts.status = 'review'` | 1 |
 
-Hay dos `owner` activos. Documentos anteriores que decían uno quedan sustituidos por este recuento.
+Aquel día había dos `owner` activos. Documentos anteriores que decían uno quedan sustituidos por este recuento. El proyecto está pausado desde el 2026-10-03, así que el recuento no se ha vuelto a leer.
 
 ## Advisors
 
@@ -86,7 +92,7 @@ Estas piezas siguen en el repositorio. No se reordenaron las migraciones en este
 
 `supabase/01-schema.sql` crea `verified_contributors` con `auth_user_id` y, a continuación, el índice `verified_contributors_auth_user_idx`. `create table if not exists` no toca una tabla que ya existe. En el esquema viejo la columna no está, y el `create index` termina con `column "auth_user_id" does not exist`.
 
-En una base nueva el orden 01 → 03 funciona: el `CREATE TABLE` ya incluye la columna. En producción, el 2026-09-25, el orden que funcionó fue 03 → 01. Hoy la columna ya existe, así que repetir 01 sobre producción es idempotente. El procedimiento de los dos casos está en `docs/Tech/06-config-operacion.md`.
+En una base nueva el orden 01 → 03 funciona: el `CREATE TABLE` ya incluye la columna. En producción, el 2026-09-25, el orden que funcionó fue 03 → 01. Aquel día la columna ya quedó creada. El proyecto está pausado desde el 2026-10-03: no repitas `01-schema.sql` al reactivarlo. El procedimiento de los dos casos está en `docs/Tech/06-config-operacion.md`.
 
 ### Índice duplicado en `auth_user_id`
 

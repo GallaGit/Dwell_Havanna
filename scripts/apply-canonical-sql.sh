@@ -43,6 +43,7 @@ FILES=(
   "supabase/03-contributor-auth.sql"
   "supabase/04-editorial-permissions.sql"
   "supabase/migrations/20260921000300_editorial_member_management.sql"
+  "supabase/migrations/20261003150500_private_dwell_media.sql"
 )
 
 if [[ "$WITH_SEED" -eq 1 ]]; then
@@ -74,7 +75,19 @@ Este orden vale cuando la base es nueva o cuando auth_user_id ya existe.
 Si verified_contributors existe y todavía no tiene auth_user_id, para y
 ejecuta 03-contributor-auth.sql antes de 01-schema.sql. Si no, el índice
 verified_contributors_auth_user_idx falla. Producción se migró así el
-2026-09-25; hoy la columna ya está y este orden es idempotente allí.
+2026-09-25. Desde el 2026-10-03 el proyecto está pausado.
+
+La migración 20261003150500 deja dwell-media privado aunque ya existiera
+como público, y crea el bucket público dwell-published. No mueve archivos.
+Producción (sfujmwumtzuzwwhfmyxa) y testing (ypeizxnafipvojpntsaw) están
+pausados desde el 2026-10-03. Al reactivar producción no reapliques
+01-schema.sql: ejecuta solo esa migración. Después, en dry-run:
+
+  node --experimental-strip-types scripts/migrate-dwell-media-objects.mjs
+
+Con --apply copia las fotos aprobadas a dwell-published (sin EXIF), mueve
+los pendientes a submissions/<uuid>.jpg y borra los rechazados.
+El ref de producción exige --allow-production.
 EOF
 
 if [[ "$APPLY" -eq 0 ]]; then

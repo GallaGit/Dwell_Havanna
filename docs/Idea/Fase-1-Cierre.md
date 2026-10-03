@@ -5,7 +5,7 @@ Commits en `GallaGit/Dwell_Havanna` rama `main`:
 - `9c7d391` fundación (schema, seed, capa de contenido con fallback)
 - `a6fdcbb` cierre (este documento describe ese commit)
 
-El proyecto de producción `sfujmwumtzuzwwhfmyxa` está activo. El SQL editorial se aplicó el 2026-09-25 (ver §6 y `docs/Tech/08-estado-supabase-2026-09-25.md`). Sigue pendiente el lanzamiento: cuenta `owner` de Ociel, Vercel, dominio e imágenes (`docs/PRODUCT/roadmap.md`, Paso 2).
+El proyecto de producción `sfujmwumtzuzwwhfmyxa` aplicó el SQL editorial el 2026-09-25 (ver §6 y `docs/Tech/08-estado-supabase-2026-09-25.md`). Desde el 2026-10-03 está pausado, igual que testing. La web pública es `https://dwell-havanna.vercel.app`. Sigue pendiente reactivar la base con el bucket privado, la cuenta `owner` de Ociel, el dominio `dwellhavana.com` y las imágenes (`docs/PRODUCT/roadmap.md`, Paso 2).
 Sin DB configurada el sitio funciona igual (fallback estático de `lib/data.ts`).
 
 ## 1. Qué se construyó
@@ -29,22 +29,22 @@ Sin DB configurada el sitio funciona igual (fallback estático de `lib/data.ts`)
 
 ### 1.3 Decisión de fotos (implementada)
 Responde a "¿qué DB es buena para fotos?": binarios en **Supabase Storage**, metadatos en **Postgres**.
-- Bucket `dwell-media` público-lectura, escritura solo `service_role` (ver `supabase/01-schema.sql`).
-- Validación en API: **solo JPEG, ≤ 8 MB**, handle obligatorio, texto obligatorio, `rights` obligatorio.
-- Se guarda el **original** en `submissions/<handle>/<uuid>.jpg`; las variantes las genera `next/image` al servir (WebP/AVIF + responsive). `next.config.ts` ya acepta `*.supabase.co`.
+- Bucket `dwell-media` privado, sin policy de `SELECT`. La copia aprobada va a `dwell-published` (público). Escritura solo `service_role`. El detalle operativo está en `docs/Tech/06-config-operacion.md`.
+- Validación en API: **solo JPEG, ≤ 4 MB**, handle obligatorio, texto obligatorio, `rights` obligatorio. El cuerpo por encima de 4,5 MB se rechaza antes de leerlo entero. El JPEG se guarda sin EXIF, con la orientación aplicada. El formulario, además, convierte y reduce la foto en el navegador antes del POST. Ese paso no cambia este contrato.
+- Se guarda en `submissions/<uuid>.jpg`, sin el handle en la ruta. Las variantes las genera `next/image` al servir (WebP/AVIF + responsive). `next.config.ts` ya acepta `*.supabase.co`.
 - RLS activado en las 5 tablas **sin policies** (defensa en profundidad: con `service_role` todo funciona; `anon`/`authenticated` no ven nada aunque la Data API exponga una tabla por error).
 - Estimación de capacidad free tier (1GB + 2GB transferencia): ~200 fotos optimizadas ≈ 60MB. Sobra para el arranque.
 
 ## 2. API `POST /api/submissions` — contrato
-Content-Type `multipart/form-data`: `handle*`, `caption*` (máx 2000), `title` (máx 140, opcional), `rights` (`true`/`on`*), `photo*` (JPEG ≤8MB).
-Respuestas: `200 {ok:true, id}` · `400 bad_form` · `401 authentication_required` · `422 handle_and_caption_required | rights_required | photo_required | photo_must_be_jpeg | photo_too_large_8mb` · `403 unknown_contributor` (la sesión no está vinculada al handle en `verified_contributors`) · `500 upload_failed | save_failed` · `503 db_not_configured | auth_not_configured`.
+Content-Type `multipart/form-data`: `handle*`, `caption*` (máx 2000), `title` (máx 140, opcional), `rights` (`true`/`on`*), `photo*` (JPEG ≤ 4 MB).
+Respuestas: `200 {ok:true, id}` · `400 bad_form` · `401 authentication_required` · `413 body_too_large` · `422 handle_and_caption_required | rights_required | photo_required | photo_must_be_jpeg | photo_too_large | photo_dimensions` · `403 unknown_contributor` (la sesión no está vinculada al handle en `verified_contributors`) · `500 upload_failed | save_failed` · `503 db_not_configured | auth_not_configured`.
 Si el insert falla tras subir, borra el archivo huérfano (best-effort).
 
 ## 3. Flujo editorial (el criterio humano no se automatiza)
 1. Un colaborador invitado envía en `/contribuir` → fila `pending`. Nada de eso es visible al público.
 2. Una cuenta `owner` o `moderator` entra a `/admin/review`. `ADMIN_TOKEN` sigue como fallback temporal.
 3. El panel pide confirmación. **Aprobar** inserta el envío de comunidad en Journal con `status='published'` y `published_at`, y revalida `/`, `/journal` y la ficha del post. No deja el post en `status='review'`.
-4. **Rechazar** marca el envío `rejected` y no crea un post.
+4. **Rechazar** borra el archivo y marca el envío `rejected`. No crea un post.
 5. Los envíos aprobados de comunidad van al Journal. Properties los crea la editora. Fase 2 podrá empujar a FB/IG lo que ya esté publicado.
 
 ## 4. Variables de entorno (`.env.example` actualizado)
@@ -57,7 +57,9 @@ Si el insert falla tras subir, borra el archivo huérfano (best-effort).
 
 Hosting, dominio (`dwellhavana.com`, renovación antes del 2026-10-06), DNS apex y `www`, Site URL y allowlist están en `docs/PRODUCT/roadmap.md`, Paso 2. El orden SQL vigente está en `docs/Tech/06-config-operacion.md`.
 
-En una base nueva, `01-schema.sql` va primero. En el esquema anterior a `03` (`verified_contributors` sin `auth_user_id`), `03-contributor-auth.sql` va antes de `01-schema.sql`. Producción se migró el 2026-09-25 20:25–20:26 CEST con ese segundo orden. El seed del 2026-09-15 se conservó (3 properties y 4 journal posts). Los 2 colaboradores de prueba se borraron. Falta invitar la cuenta de Ociel en Auth y después insertar el `owner`. El registro está en `docs/Tech/08-estado-supabase-2026-09-25.md` y en `supabase/prod-applied/2026-09-25/`.
+En una base nueva, `01-schema.sql` va primero. En el esquema anterior a `03` (`verified_contributors` sin `auth_user_id`), `03-contributor-auth.sql` va antes de `01-schema.sql`. Producción se migró el 2026-09-25 20:25–20:26 CEST con ese segundo orden. El seed del 2026-09-15 se conservó (3 properties y 4 journal posts). Los 2 colaboradores de prueba se borraron. El registro está en `docs/Tech/08-estado-supabase-2026-09-25.md` y en `supabase/prod-applied/2026-09-25/`.
+
+El orden de una base nueva, ya con el bucket privado, está en `docs/Tech/06-config-operacion.md`. Producción no lo repite: está pausada desde el 2026-10-03 y, al reactivarla, solo se aplica `supabase/migrations/20261003150500_private_dwell_media.sql` y `scripts/migrate-dwell-media-objects.mjs`. Falta invitar la cuenta de Ociel en Auth y después insertar el `owner`.
 
 Después: dar de alta colaboradores (`insert into verified_contributors ...`), invitar el email desde `/admin/review` (no hay registro público), probar `/contribuir` → aprobar → `journal_posts.status='published'`, fijar `NEXT_PUBLIC_SITE_URL` y la allowlist `https://<dominio>/auth/callback`, y validar feed, sitemap y un slug en el Sharing Debugger.
 
@@ -67,10 +69,10 @@ Después: dar de alta colaboradores (`insert into verified_contributors ...`), i
 ## 8. Prueba end-to-end (2026-09-15, proyecto `sfujmwumtzuzwwhfmyxa`) — TODO ✅
 1. **Lectura `service_role`**: 2 colaboradores + 3 propiedades seed visibles. ✅
 2. **RLS con key pública**: `anon` devuelve `[]` en contributors y properties. ✅
-3. **Envío real** `POST /api/submissions` (handle `@gallados_lab` + JPEG 197KB + derechos): `200 {ok:true}`, archivo en `dwell-media/submissions/gallados-lab/<uuid>.jpg`. ✅ (Primer intento dio `403` por dev server rancio anterior al `.env` final; con server fresco funciona.)
+3. **Envío real** `POST /api/submissions` (handle `@gallados_lab` + JPEG 197KB + derechos): `200 {ok:true}`, archivo en `dwell-media/submissions/gallados-lab/<uuid>.jpg`. ✅ (Primer intento dio `403` por dev server rancio anterior al `.env` final; con server fresco funciona.) Esa ruta con handle es la de la prueba del 2026-09-15. El código actual guarda `submissions/<uuid>.jpg` en el bucket privado.
 4. **Moderación** `/admin/review` (login cookie + lista + server action aprobar): submission → `approved`, borrador `community-*` en `journal_posts` con `status='review'`. ✅ Ese resultado es el de la prueba del 2026-09-15. El código actual, tras la confirmación del panel, inserta `status='published'`.
 5. **Lectura DB en vivo**: marcador publicado aparece en `/properties`; `/feed.xml` 8 items; `/sitemap.xml` con slugs; OG tags correctos por slug. ✅
 6. **Limpieza**: borrados marcador, envío, borrador y archivo del bucket. DB = seed original, bucket vacío, `pending` vacío. ✅
 Notas de entorno local: la red intercepta TLS y Node falla con `UNABLE_TO_VERIFY_LEAF_SIGNATURE` (curl sí valida con el almacén de Windows); las pruebas usaron `NODE_TLS_REJECT_UNAUTHORIZED=0` **solo en el proceso de test**, nada commiteado. En producción no aplica.
 
-Esta sección describe la prueba del 2026-09-15 y la limpieza de aquel día. El 2026-09-25 el mismo proyecto sigue activo, conserva el seed, ya no tiene los colaboradores de prueba y tiene las siete tablas del esquema editorial. Ese estado está en `docs/Tech/08-estado-supabase-2026-09-25.md`. El paso 4 de arriba insertó el borrador de comunidad con `status='review'`; el código actual, tras la confirmación del panel, inserta `status='published'`.
+Esta sección describe la prueba del 2026-09-15 y la limpieza de aquel día. El 2026-09-25 el mismo proyecto seguía activo, conservaba el seed, ya no tenía los colaboradores de prueba y tenía las siete tablas del esquema editorial. Ese estado está en `docs/Tech/08-estado-supabase-2026-09-25.md`. Desde el 2026-10-03 el proyecto está pausado. El paso 4 de arriba insertó el borrador de comunidad con `status='review'`; el código actual, tras la confirmación del panel, inserta `status='published'`.

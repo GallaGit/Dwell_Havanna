@@ -1,8 +1,8 @@
 # SQL aplicado en producción el 2026-09-25
 
-Registro de lo que se ejecutó en `sfujmwumtzuzwwhfmyxa` (Dwell_Havanna_DB) el 2026-09-25, entre las 20:25 y las 20:26 CEST. El estado resultante y el procedimiento vigente están en `docs/Tech/08-estado-supabase-2026-09-25.md`.
+Registro de lo que se ejecutó en `sfujmwumtzuzwwhfmyxa` (Dwell_Havanna_DB) el 2026-09-25, entre las 20:25 y las 20:26 CEST. La lectura de aquel día está en `docs/Tech/08-estado-supabase-2026-09-25.md`. El proyecto está pausado desde el 2026-10-03.
 
-Esta carpeta no es una migración del CLI. `supabase db push` solo lee `supabase/migrations/`. No vuelvas a aplicar estos archivos sobre producción: el esquema ya está.
+Esta carpeta no es una migración del CLI. `supabase db push` solo lee `supabase/migrations/`. No vuelvas a aplicar estos archivos. Al reactivar producción, el único SQL nuevo es `supabase/migrations/20261003150500_private_dwell_media.sql`, y después `scripts/migrate-dwell-media-objects.mjs`. El `01-schema` de esta carpeta describe el bucket como estaba aquel día. El código actual lo deja privado.
 
 El historial `supabase_migrations.schema_migrations` guarda el SQL de los archivos de migración, con los comentarios de cabecera recortados. `00_preflight_readonly.sql` y `05_postcheck_readonly.sql` fueron lecturas y no tienen versión.
 

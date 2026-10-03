@@ -42,7 +42,7 @@ El panel acepta cuentas `owner` y `moderator` con Supabase Auth. `ADMIN_TOKEN` q
 
 El orden de implementación está documentado en `docs/PRODUCT/roadmap.md`, sección **Evolución de permisos editoriales**.
 
-En testing, las migraciones editoriales ya están aplicadas y hay dos `owner` activos. El colaborador E2E sigue siendo colaborador. En producción el esquema está aplicado y la fila `owner` de Ociel todavía no existe.
+El 2026-09-25, en testing, las migraciones editoriales ya estaban aplicadas y había dos `owner` activos. El colaborador E2E sigue siendo colaborador. En producción el esquema estaba aplicado y la fila `owner` de Ociel todavía no existía. Los dos proyectos están pausados desde el 2026-10-03. `ADMIN_TOKEN` sigue como acceso de emergencia.
 
 ## Para la editora
 
@@ -117,7 +117,7 @@ En `/contribuir` completa estos campos:
 - Tu handle de colaborador.
 - Un título opcional de hasta 140 caracteres.
 - Un caption de hasta 2.000 caracteres.
-- Una imagen JPEG de hasta 8 MB.
+- Una foto JPEG, PNG, WebP o HEIC. No hace falta reducirla a mano. Si el lado largo pasa de 2560 px, o el archivo pasa de 4 MB, o no es JPEG, el navegador la convierte a JPEG y baja la calidad hasta dejarla en 4 MB o menos. Un JPEG que ya cumple esas dos condiciones se envía tal cual. Si el navegador no puede leer el archivo, el formulario lo dice. El servidor sigue aceptando solo JPEG de hasta 4 MB.
 - La confirmación de que tienes derecho a compartir la imagen.
 
 Selecciona el botón de envío después de revisar los datos.
@@ -155,8 +155,11 @@ El sistema responde con estos errores cuando una condición falla:
 | No existe una sesión | `401 authentication_required` | Abre `/iniciar-sesion` y usa el enlace recibido. |
 | La cuenta no está vinculada al handle | `403 unknown_contributor` | Comprueba el handle o contacta con la editora. |
 | Falta la confirmación de derechos | `422 rights_required` | Marca la confirmación antes de enviar. |
-| La imagen no es JPEG | `422 photo_must_be_jpeg` | Convierte la imagen a `.jpg` o `.jpeg`. |
-| La imagen supera 8 MB | `422 photo_too_large_8mb` | Reduce el tamaño de la imagen. |
+| El navegador no puede leer la foto | El formulario muestra el mensaje, sin llamar a la API | Exporta la foto como JPEG, PNG o WebP y vuelve a elegirla. HEIC solo funciona si ese navegador lo decodifica. |
+| La imagen no es JPEG al llegar al servidor | `422 photo_must_be_jpeg` | El formulario ya convierte PNG, WebP y HEIC. Si ves este código, exporta un JPEG. |
+| La imagen supera 4 MB al llegar al servidor | `422 photo_too_large` | El formulario ya intenta dejarla bajo 4 MB. Prueba con otra foto. |
+| La imagen tiene demasiados píxeles | `422 photo_dimensions` | Prueba con otra foto. El formulario deja el lado largo en 2560 px como máximo. |
+| El cuerpo de la petición supera 4,5 MB | `413 body_too_large` | El servidor no lee el resto. Prueba con otra foto. |
 | Supabase no está configurado | `503 auth_not_configured` | Contacta con la persona que administra la aplicación. |
 
 ## Ejemplo de autorización correcta
