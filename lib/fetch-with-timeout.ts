@@ -40,6 +40,13 @@ function requestMethod(input: RequestInfo | URL, init?: RequestInit): string {
   return "GET";
 }
 
+/**
+ * GET/HEAD del binario de un objeto (`/object/<bucket>/<ruta>`).
+ * Firmar, listar, mover, copiar y borrar no descargan el JPEG.
+ */
+const STORAGE_OBJECT_READ =
+  /\/storage\/v1\/object\/(?!(?:list-v2|list|sign|info|move|copy|public)(?:\/|$))[^/?#]+\/[^?#]+/;
+
 /** POST/PUT de un objeto de Storage (incluye la subida firmada). No incluye list/sign/move. */
 export function isSupabaseStorageUpload(input: RequestInfo | URL, init?: RequestInit): boolean {
   const method = requestMethod(input, init);
@@ -55,12 +62,27 @@ export function isSupabaseStorageUpload(input: RequestInfo | URL, init?: Request
   return /\/storage\/v1\/object\/.+/.test(pathname);
 }
 
+/** Descarga del JPEG al aprobar: el cuerpo puede llegar a 4 MB y no cabe en 5 s. */
+export function isSupabaseStorageObjectRead(input: RequestInfo | URL, init?: RequestInit): boolean {
+  const method = requestMethod(input, init);
+  if (method !== "GET" && method !== "HEAD") return false;
+  let pathname: string;
+  try {
+    pathname = new URL(requestUrl(input)).pathname;
+  } catch {
+    return false;
+  }
+  return STORAGE_OBJECT_READ.test(pathname);
+}
+
 export function resolveSupabaseRequestTimeoutMs(
   input: RequestInfo | URL,
   init: RequestInit | undefined,
   readTimeoutMs: number,
 ): number {
-  if (!isSupabaseStorageUpload(input, init)) return readTimeoutMs;
+  if (!isSupabaseStorageUpload(input, init) && !isSupabaseStorageObjectRead(input, init)) {
+    return readTimeoutMs;
+  }
   return Math.max(readTimeoutMs, STORAGE_UPLOAD_TIMEOUT_MS);
 }
 

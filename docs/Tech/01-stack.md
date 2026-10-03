@@ -8,17 +8,18 @@ Las decisiones de producto y el roadmap están en `docs/PRODUCT/roadmap.md`.
 
 | Pieza | Versión / detalle | Dónde se ve |
 |---|---|---|
-| Next.js (App Router) | `16.3.5` | `package.json`, `app/layout.tsx`, `next.config.ts` |
+| Next.js (App Router) | `16.3.8` | `package.json`, `app/layout.tsx`, `next.config.ts` |
 | React + React DOM | `19.2.8` | `package.json` |
 | TypeScript | `^5`, `strict: true`, `jsx: react-jsx`, alias `@/* → ./*` | `tsconfig.json` |
 | Tailwind CSS | `^4` vía `@tailwindcss/postcss` + `@import "tailwindcss"` | `postcss.config.mjs`, `app/globals.css` |
 | Supabase JS | `@supabase/supabase-js ^2.116.0` (solo server, ver `04`) | `lib/db.ts`, `package.json` |
+| sharp | `0.35.5` | `lib/jpeg-metadata.ts`. Reencode de los JPEG de envío en el runtime Node |
 | Node runtime | Route Handlers y admin con `export const runtime = "nodejs"` | `app/api/submissions/route.ts`, `app/admin/review/page.tsx` |
 | ESLint | `^9` + `eslint-config-next` (core-web-vitals + typescript) | `eslint.config.mjs`, script `npm run lint` |
 
 ## Rendering / imágenes / fuentes
 
-- `next/image` con `remotePatterns` en `next.config.ts`: `images.unsplash.com`, `picsum.photos`, `*.supabase.co` (bucket `dwell-media`, Fase 1).
+- `next/image` con `remotePatterns` en `next.config.ts`: `images.unsplash.com`, `picsum.photos`, `*.supabase.co` (fotos publicadas en `dwell-published` y URLs firmadas del panel).
 - `next/font/google` en `app/layout.tsx`: Fraunces (normal e itálica, variable `--font-fraunces`) e Inter (`--font-inter`), `display: swap`. `@theme` apunta `--font-display` y `--font-body` a esas variables, con Georgia y `system-ui` como reserva.
 - `next/image`: `qualities: [70]` en `next.config.ts`, porque Next 16 solo admite 75 si no se declara la lista. La imagen LCP usa `preload`.
 - ISR con `export const revalidate = 3600` en home, slugs, sitemap, feed y embed. El embed también exporta `generateStaticParams()`.

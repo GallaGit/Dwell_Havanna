@@ -5,6 +5,7 @@ import {
   DEFAULT_SUPABASE_FETCH_TIMEOUT_MS,
   STORAGE_UPLOAD_TIMEOUT_MS,
   createFetchWithTimeout,
+  isSupabaseStorageObjectRead,
   isSupabaseStorageUpload,
   resolveSupabaseRequestTimeoutMs,
   supabaseFetchTimeoutMs,
@@ -183,17 +184,32 @@ describe("createFetchWithTimeout", { concurrency: 1 }, () => {
     assert.equal(STORAGE_UPLOAD_TIMEOUT_MS, 60_000);
 
     const upload = "https://xyz.supabase.co/storage/v1/object/dwell-media/submissions/a.jpg";
-    const signed = "https://xyz.supabase.co/storage/v1/object/upload/sign/dwell-media/a.jpg?token=t";
+    const published = "https://xyz.supabase.co/storage/v1/object/dwell-published/a.jpg";
+    const signedUpload = "https://xyz.supabase.co/storage/v1/object/upload/sign/dwell-media/a.jpg?token=t";
+    const signUrls = "https://xyz.supabase.co/storage/v1/object/sign/dwell-media";
     const list = "https://xyz.supabase.co/storage/v1/object/list/dwell-media";
+    const remove = "https://xyz.supabase.co/storage/v1/object/dwell-media";
+    const copy = "https://xyz.supabase.co/storage/v1/object/copy";
     const read = "https://xyz.supabase.co/rest/v1/properties";
     assert.equal(isSupabaseStorageUpload(upload, { method: "POST" }), true);
     assert.equal(isSupabaseStorageUpload(upload, { method: "PUT" }), true);
+    assert.equal(isSupabaseStorageUpload(published, { method: "POST" }), true);
     assert.equal(isSupabaseStorageUpload(upload, { method: "GET" }), false);
-    assert.equal(isSupabaseStorageUpload(signed, { method: "PUT" }), true);
+    assert.equal(isSupabaseStorageUpload(signedUpload, { method: "PUT" }), true);
+    assert.equal(isSupabaseStorageUpload(signUrls, { method: "POST" }), false);
     assert.equal(isSupabaseStorageUpload(list, { method: "POST" }), false);
+    assert.equal(isSupabaseStorageUpload(remove, { method: "DELETE" }), false);
+    assert.equal(isSupabaseStorageUpload(copy, { method: "POST" }), false);
     assert.equal(isSupabaseStorageUpload(read, { method: "GET" }), false);
+    assert.equal(isSupabaseStorageObjectRead(upload, { method: "GET" }), true);
+    assert.equal(isSupabaseStorageObjectRead(signUrls, { method: "POST" }), false);
+    assert.equal(isSupabaseStorageObjectRead(remove, { method: "DELETE" }), false);
     assert.equal(resolveSupabaseRequestTimeoutMs(upload, { method: "POST" }, 5_000), 60_000);
+    assert.equal(resolveSupabaseRequestTimeoutMs(published, { method: "POST" }, 5_000), 60_000);
+    assert.equal(resolveSupabaseRequestTimeoutMs(upload, { method: "GET" }, 5_000), 60_000);
     assert.equal(resolveSupabaseRequestTimeoutMs(upload, { method: "POST" }, 90_000), 90_000);
+    assert.equal(resolveSupabaseRequestTimeoutMs(signUrls, { method: "POST" }, 5_000), 5_000);
+    assert.equal(resolveSupabaseRequestTimeoutMs(remove, { method: "DELETE" }, 5_000), 5_000);
     assert.equal(resolveSupabaseRequestTimeoutMs(read, { method: "GET" }, 5_000), 5_000);
   });
 });

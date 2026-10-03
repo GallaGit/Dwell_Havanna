@@ -21,7 +21,8 @@ let cached: SupabaseClient | null | undefined;
  * que el ISR de las páginas, y el fetch se aborta si Supabase no responde
  * (`SUPABASE_FETCH_TIMEOUT_MS`, default 5s). El cliente de abajo
  * (`getServiceClient`) sigue en `no-store` para la cola de moderación y las
- * mutaciones. La subida a Storage usa un timeout más largo.
+ * mutaciones. La subida y la descarga de un objeto de Storage usan un
+ * timeout más largo; firmar y borrar siguen en el corto.
  */
 let publishedCached: SupabaseClient | null | undefined;
 
