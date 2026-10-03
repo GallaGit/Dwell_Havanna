@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { hasSupabaseAuthCookie } from "@/lib/auth-cookie";
+import { createFetchWithTimeout, supabaseFetchTimeoutMs } from "@/lib/fetch-with-timeout";
 
 function withFramePolicy(response: NextResponse, pathname: string) {
   if (pathname.startsWith("/embed")) {
@@ -20,6 +21,9 @@ export async function proxy(request: NextRequest) {
   if (!hasSupabaseAuthCookie(request.cookies.getAll())) return response;
 
   const supabase = createServerClient(url, key, {
+    global: {
+      fetch: (input, init) => createFetchWithTimeout(supabaseFetchTimeoutMs())(input, init),
+    },
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(cookiesToSet) {
@@ -30,7 +34,11 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  await supabase.auth.getUser();
+  try {
+    await supabase.auth.getUser();
+  } catch {
+    // Un timeout de Auth no debe convertir la página en un 500.
+  }
   return response;
 }
 
