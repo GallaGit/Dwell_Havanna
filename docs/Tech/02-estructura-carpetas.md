@@ -52,17 +52,20 @@ La documentación de producto está en `docs/PRODUCT/`. Esta página describe la
 │   ├── site.ts             # siteUrl + canonicalFor(path)
 │   ├── page-metadata.ts    # canonical, Open Graph y Twitter por página
 │   ├── image-delivery.ts   # URL /_next/image a 1200px y calidad 70
+│   ├── submission-media.mjs # rutas privadas, copia publicada y plan de migración
+│   ├── jpeg-metadata.ts    # reencode JPEG sin EXIF, con orientación
+│   ├── submissions-validation.mjs # tope de 4 MB y de 4,5 MB del cuerpo
 │   ├── auth-cookie.ts      # detecta sb-*-auth-token sin llamar a Auth
 │   ├── editorial-auth.ts   # sesión editorial o fallback ADMIN_TOKEN
 │   ├── editorial-permissions.ts # owner, moderator y fallback
 │   ├── supabase-server.ts  # cliente Auth en el servidor
 │   └── supabase-browser.ts # cliente Auth en el navegador
 └── supabase/
-    ├── 01-schema.sql       # 5 tablas + RLS + bucket dwell-media
+    ├── 01-schema.sql       # 5 tablas + RLS + buckets dwell-media y dwell-published
     ├── 02-seed.sql         # seed idempotente desde data.ts
     ├── 03-contributor-auth.sql
     ├── 04-editorial-permissions.sql
-    └── migrations/         # 20260921000100, 20260921000200, 20260921000300
+    └── migrations/         # …00100, …00200, …00300 y 20261003150500 (bucket privado)
 ```
 
 ## Rol por archivo clave
@@ -74,7 +77,7 @@ La documentación de producto está en `docs/PRODUCT/`. Esta página describe la
 | `app/sitemap.ts` | Sitemap dinámico desde `listPublished*()` |
 | `app/feed.xml/route.ts` | RSS journal+properties |
 | `app/embed/[slug]/route.ts` | Embed terceros (resuelve property o post, 404 si no) |
-| `app/api/submissions/route.ts` | Ingesta validada (JPEG ≤8MB, allowlist, Storage) |
+| `app/api/submissions/route.ts` | Ingesta validada (JPEG ≤4MB, sin EXIF, allowlist, bucket privado) |
 | `app/contribuir/page.tsx` | Client Component: `fetch` + estados idle/sending/done/error |
 | `app/iniciar-sesion/page.tsx` | Client Component: enlace OTP para emails ya invitados |
 | `app/admin/review/page.tsx` | Moderación, invitaciones y gestión de miembros con Server Actions |

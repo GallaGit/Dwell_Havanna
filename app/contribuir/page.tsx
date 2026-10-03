@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { MAX_SUBMISSION_BYTES } from "@/lib/submissions-validation.mjs";
 
 type State =
   | { kind: "idle" }
@@ -14,7 +15,9 @@ const FRIENDLY: Record<string, string> = {
   rights_required: "You must grant publishing rights before sending.",
   photo_required: "Attach a photo.",
   photo_must_be_jpeg: "JPEG files only (.jpg). Convert the photo and try again.",
-  photo_too_large_8mb: "The photo is larger than 8 MB. Reduce its size and try again.",
+  photo_too_large: "The photo is larger than 4 MB. Reduce its size and try again.",
+  photo_dimensions: "The photo is too large in pixels. Export a smaller JPEG and try again.",
+  body_too_large: "The upload is larger than 4.5 MB, which the host rejects. Reduce the photo and try again.",
   unknown_contributor:
     "Your account is not linked to that contributor. Contact us to review your invitation.",
   authentication_required: "Sign in with your invitation before sending.",
@@ -30,10 +33,19 @@ export default function ContribuirPage() {
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const body = new FormData(e.currentTarget);
+    const photo = body.get("photo");
+    if (photo instanceof File && photo.size > MAX_SUBMISSION_BYTES) {
+      setState({
+        kind: "error",
+        message: FRIENDLY.photo_too_large,
+      });
+      return;
+    }
     setState({ kind: "sending" });
     const res = await fetch("/api/submissions", {
       method: "POST",
-      body: new FormData(e.currentTarget),
+      body,
     });
     const json = (await res.json().catch(() => null)) as {
       ok: boolean;
@@ -108,7 +120,7 @@ export default function ContribuirPage() {
         </label>
 
         <label className="flex flex-col gap-2">
-           <span className="meta-label">Photo — JPEG, max. 8 MB</span>
+           <span className="meta-label">Photo — JPEG, max. 4 MB</span>
           <input
             name="photo"
             type="file"

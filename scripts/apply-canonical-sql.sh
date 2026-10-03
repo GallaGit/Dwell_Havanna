@@ -40,6 +40,7 @@ FILES=(
   "supabase/03-contributor-auth.sql"
   "supabase/04-editorial-permissions.sql"
   "supabase/migrations/20260921000300_editorial_member_management.sql"
+  "supabase/migrations/20261003150500_private_dwell_media.sql"
 )
 
 if [[ "$WITH_SEED" -eq 1 ]]; then
@@ -66,6 +67,16 @@ con su auth_user_id real:
   values ('<auth-user-uuid>', 'owner', '<nombre editorial>');
 
 El seed (02-seed.sql) es contenido de ejemplo. Omítelo si no lo quieres.
+
+La migración 20261003150500 deja dwell-media privado aunque ya existiera
+como público, y crea el bucket público dwell-published. No mueve archivos.
+En un proyecto que ya aplicó el SQL anterior basta con ese archivo; no
+reapliques 01-schema.sql si no hace falta. Después, en dry-run:
+
+  node --experimental-strip-types scripts/migrate-dwell-media-objects.mjs
+
+Con --apply copia las fotos aprobadas a dwell-published (sin EXIF), mueve
+los pendientes a submissions/<uuid>.jpg y borra los rechazados.
 EOF
 
 if [[ "$APPLY" -eq 0 ]]; then

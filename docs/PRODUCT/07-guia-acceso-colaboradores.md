@@ -117,7 +117,7 @@ En `/contribuir` completa estos campos:
 - Tu handle de colaborador.
 - Un título opcional de hasta 140 caracteres.
 - Un caption de hasta 2.000 caracteres.
-- Una imagen JPEG de hasta 8 MB.
+- Una imagen JPEG de hasta 4 MB. El hosting corta la petición hacia 4,5 MB, así que 8 MB no llega a guardarse.
 - La confirmación de que tienes derecho a compartir la imagen.
 
 Selecciona el botón de envío después de revisar los datos.
@@ -156,7 +156,9 @@ El sistema responde con estos errores cuando una condición falla:
 | La cuenta no está vinculada al handle | `403 unknown_contributor` | Comprueba el handle o contacta con la editora. |
 | Falta la confirmación de derechos | `422 rights_required` | Marca la confirmación antes de enviar. |
 | La imagen no es JPEG | `422 photo_must_be_jpeg` | Convierte la imagen a `.jpg` o `.jpeg`. |
-| La imagen supera 8 MB | `422 photo_too_large_8mb` | Reduce el tamaño de la imagen. |
+| La imagen supera 4 MB | `422 photo_too_large` | Reduce el tamaño de la imagen. |
+| La imagen tiene demasiados píxeles | `422 photo_dimensions` | Exporta un JPEG más pequeño. |
+| El cuerpo de la petición supera 4,5 MB | `413 body_too_large` | Reduce la foto. El servidor no llega a leerla entera. |
 | Supabase no está configurado | `503 auth_not_configured` | Contacta con la persona que administra la aplicación. |
 
 ## Ejemplo de autorización correcta

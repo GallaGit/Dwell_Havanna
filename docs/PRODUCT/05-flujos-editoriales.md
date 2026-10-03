@@ -8,7 +8,7 @@ Fuente: `app/contribuir/page.tsx`, `app/api/submissions/route.ts`, `app/admin/re
 
 - Form (`app/contribuir/page.tsx`): handle*, title≤140, caption*≤2000, photo* JPEG, checkbox `rights=true`*. Errores en español mapeados por código (`FRIENDLY`).
 - Auth (`app/iniciar-sesion/page.tsx`): solo envía enlace OTP a usuarios ya invitados (`shouldCreateUser=false`). No hay registro público.
-- API (`app/api/submissions/route.ts`, multipart): exige sesión Auth (401), comprueba el vínculo `verified_contributors.auth_user_id` con el handle enviado (403), valida handle+caption (422), rights (422), photo JPEG (422), ≤8MB (422), sube a `dwell-media/submissions/<handle>/<uuid>.jpg`, `getPublicUrl`, inserta `source='form', rights_granted=true`. Si el insert falla, borra el huérfano (best-effort).
+- API (`app/api/submissions/route.ts`, multipart): exige sesión Auth (401), comprueba el vínculo `verified_contributors.auth_user_id` con el handle enviado (403), valida handle+caption (422), rights (422) y JPEG (422). La foto no puede pasar de 4 MB (`422 photo_too_large`). Un `Content-Length` o un stream por encima de 4,5 MB responde `413 body_too_large` sin leer el resto. El servidor reencodea el JPEG, aplica la orientación y tira el EXIF. Sube a `dwell-media/submissions/<uuid>.jpg` (bucket privado, sin handle en la ruta) e inserta `image_url` con esa ruta, `source='form', rights_granted=true`. Si el insert falla, borra el huérfano (best-effort).
 - Contrato detallado ya documentado en `docs/Idea/Fase-1-Cierre.md §2` — no se duplica aquí.
 
 ## 2. Moderación (`/admin/review`, criterio humano no automatizable)
@@ -17,11 +17,11 @@ Fuente: `app/contribuir/page.tsx`, `app/api/submissions/route.ts`, `app/admin/re
 
 1. `getEditorialAccess()`: obtiene el usuario mediante Supabase Auth y busca un miembro activo en `editorial_members`. Si no hay miembro, acepta temporalmente la cookie `dh_admin` cuando `ADMIN_TOKEN` está configurado.
 2. Lista `pending order created_at asc` con foto + `author_handle/source/fecha` + texto.
-3. `decide`: `reject → status='rejected'`; `approve → insert journal_posts {slug: community-<8primeros id>, title: primera línea ≤90, category: 'Community', excerpt: ≤220, image, date_label: mes y año, reading_time: '3 min', status: 'published', published_at: now}` + `submissions → approved`.
+3. `decide`: `reject` borra el objeto de `dwell-media` y luego marca `status='rejected'`. Si el borrado falla, la fila sigue `pending`. `approve` copia el JPEG ya sin EXIF a `dwell-published/<uuid>.jpg`, inserta `journal_posts` con esa URL pública `{slug: community-<8primeros id>, title: primera línea ≤90, category: 'Community', excerpt: ≤220, image, date_label: mes y año, reading_time: '3 min', status: 'published', published_at: now}` y pasa el envío a `approved`. La cola muestra la pendiente con una URL firmada de 15 minutos, no con la URL pública.
 4. Cada aprobación o rechazo escribe un evento en `moderation_events`. La condición `status='pending'` evita procesar dos decisiones sobre el mismo envío.
 5. La interfaz pide confirmación antes de enviar cada decisión. El diálogo informa que aprobar publica el contenido y que rechazar lo retira de la cola.
 6. Tras aprobar, el servidor revalida `/`, `/journal`, `/journal/<slug>` y `/admin/review`.
-7. Invitar (`inviteContributor`) requiere `owner` o el fallback temporal. Un `moderator` no invita. El usuario elige un handle existente y un email. `auth.admin.inviteUserByEmail` crea la cuenta invitada y guarda `auth_user_id`.
+7. Invitar (`inviteContributor`) requiere `owner` o el fallback temporal. Un `moderator` no invita. El usuario elige un handle existente y un email. Si ese handle ya tiene `auth_user_id`, la acción no envía la invitación y no sustituye el vínculo. Si está libre, `auth.admin.inviteUserByEmail` crea la cuenta y el `update` solo escribe `auth_user_id` cuando sigue siendo null.
 8. Estados vacíos: sin acceso → login editorial y, si existe, formulario de token temporal; sin DB → "Sin base de datos".
 
 `inviteContributor` e `inviteEditorialMember` pasan `redirectTo` con `NEXT_PUBLIC_SITE_URL` y `/auth/callback`. Si la variable no está definida, el servidor usa `http://localhost:3000`. Supabase Auth solo completa el enlace si esa URL está en la allowlist de redirecciones. `localhost` abre el enlace en la máquina que ejecuta la app. La confirmación remota queda diferida hasta la URL pública de producción. La plantilla del email tiene que enviar `token_hash` y `type` al callback. El detalle está en `docs/Tech/06-config-operacion.md`.
