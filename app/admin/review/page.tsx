@@ -4,6 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { PUBLISHED_CONTENT_TAG } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { contributorInviteDecision } from "@/lib/contributor-invite.mjs";
+import { resolveInviteOrigin } from "@/lib/site";
 import { getServiceClient } from "@/lib/db";
 import { JpegProcessingError, stripJpegMetadata } from "@/lib/jpeg-metadata";
 import {
@@ -211,7 +212,7 @@ async function inviteContributor(formData: FormData): Promise<void> {
   }
 
   const { data: invited, error: inviteError } = await db.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback?next=/contribuir`,
+    redirectTo: `${resolveInviteOrigin(process.env.NEXT_PUBLIC_SITE_URL)}/auth/callback?next=/contribuir`,
   });
   if (inviteError || !invited.user) {
     adminInviteRedirect(inviteError?.code === "email_exists" ? "already-registered" : "send-failed");
@@ -323,7 +324,7 @@ async function inviteEditorialMember(formData: FormData): Promise<void> {
   if (!email || !email.includes("@") || (role !== "owner" && role !== "moderator")) return;
 
   const { data: invited, error } = await db.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback?next=/admin/review`,
+    redirectTo: `${resolveInviteOrigin(process.env.NEXT_PUBLIC_SITE_URL)}/auth/callback?next=/admin/review`,
   });
   if (error || !invited.user) {
     adminInviteRedirect(error?.code === "email_exists" ? "already-registered" : "send-failed");

@@ -10,7 +10,7 @@ Copiar `.env.example` → `.env.local` (gitignoreado, nunca commitear).
 
 | Var | Expuesta al navegador | Dónde se usa |
 |---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | Sí | `lib/site.ts` (OG, sitemap, feed, embeds). También `redirectTo` de las invitaciones Auth. Si falta, el sitio canónico usa `https://dwellhavana.com` y las invitaciones usan `http://localhost:3000` |
+| `NEXT_PUBLIC_SITE_URL` | Sí | `lib/site.ts` (OG, sitemap, feed, embeds) y `redirectTo` de las invitaciones Auth. La web pública es `https://dwell-havanna.vercel.app` y en Vercel la variable ya vale eso. Si falta, está vacía o no es una URL `http(s)` válida, la canónica usa esa misma web. Las invitaciones usan `http://localhost:3000` si la variable falta o está vacía. `dwellhavana.com` es el dominio siguiente y todavía no está conectado |
 | `NEXT_PUBLIC_SUPABASE_URL` | Sí | `lib/db.ts` y el cliente Auth |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sí | Supabase Auth en el navegador y cookies SSR |
 | `SUPABASE_SERVICE_ROLE_KEY` | **No, solo server** | `lib/db.ts`, API submissions, admin e invitaciones |
