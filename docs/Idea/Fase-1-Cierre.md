@@ -25,13 +25,13 @@ Sin DB configurada el sitio funciona igual (fallback estático de `lib/data.ts`)
 |---|---|---|
 | Formulario | `app/contribuir/page.tsx` | client component: handle, título opcional, texto, foto, checkbox de derechos; mensajes de error en español mapeados por código |
 | API | `app/api/submissions/route.ts` | `POST` multipart; ver §2 |
-| Moderación | `app/admin/review/page.tsx` | cuenta `owner` o `moderator`; `ADMIN_TOKEN` y cookie httpOnly `dh_admin` solo como fallback temporal; lista pendientes con foto+texto; **aprobar, tras confirmación, inserta `journal_posts` con `status='published'`** (categoría Community); rechazar → `rejected`; ver §3 |
+| Moderación | `app/admin/review/page.tsx` | cuenta `owner` o `moderator`. El token de emergencia se retiró después de este cierre; lista pendientes con foto+texto; **aprobar, tras confirmación, inserta `journal_posts` con `status='published'`** (categoría Community); rechazar → `rejected`; ver §3 |
 
 ### 1.3 Decisión de fotos (implementada)
 Responde a "¿qué DB es buena para fotos?": binarios en **Supabase Storage**, metadatos en **Postgres**.
 - Bucket `dwell-media` privado, sin policy de `SELECT`. La copia aprobada va a `dwell-published` (público). Escritura solo `service_role`. El detalle operativo está en `docs/Tech/06-config-operacion.md`.
 - Validación en API: **solo JPEG, ≤ 4 MB**, handle obligatorio, texto obligatorio, `rights` obligatorio. El cuerpo por encima de 4,5 MB se rechaza antes de leerlo entero. El JPEG se guarda sin EXIF, con la orientación aplicada. El formulario, además, convierte y reduce la foto en el navegador antes del POST. Ese paso no cambia este contrato.
-- Se guarda en `submissions/<uuid>.jpg`, sin el handle en la ruta. Las variantes las genera `next/image` al servir (WebP/AVIF + responsive). `next.config.ts` ya acepta `*.supabase.co`.
+- Se guarda en `submissions/<uuid>.jpg`, sin el handle en la ruta. Las variantes las genera `next/image` al servir (WebP/AVIF + responsive). `next.config.ts` acepta el hostname concreto del proyecto, no `*.supabase.co`.
 - RLS activado en las 5 tablas **sin policies** (defensa en profundidad: con `service_role` todo funciona; `anon`/`authenticated` no ven nada aunque la Data API exponga una tabla por error).
 - Estimación de capacidad free tier (1GB + 2GB transferencia): ~200 fotos optimizadas ≈ 60MB. Sobra para el arranque.
 
@@ -42,13 +42,13 @@ Si el insert falla tras subir, borra el archivo huérfano (best-effort).
 
 ## 3. Flujo editorial (el criterio humano no se automatiza)
 1. Un colaborador invitado envía en `/contribuir` → fila `pending`. Nada de eso es visible al público.
-2. Una cuenta `owner` o `moderator` entra a `/admin/review`. `ADMIN_TOKEN` sigue como fallback temporal.
+2. Una cuenta `owner` o `moderator` entra a `/admin/review`. El token de emergencia ya no existe en el código.
 3. El panel pide confirmación. **Aprobar** inserta el envío de comunidad en Journal con `status='published'` y `published_at`, y revalida `/`, `/journal` y la ficha del post. No deja el post en `status='review'`.
 4. **Rechazar** borra el archivo y marca el envío `rejected`. No crea un post.
 5. Los envíos aprobados de comunidad van al Journal. Properties los crea la editora. Fase 2 podrá empujar a FB/IG lo que ya esté publicado.
 
 ## 4. Variables de entorno (`.env.example` actualizado)
-`NEXT_PUBLIC_SITE_URL` · `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` · `SUPABASE_SERVICE_ROLE_KEY` · `ADMIN_TOKEN`. Copiar a `.env.local` (gitignoreado). Solo `NEXT_PUBLIC_*` llega al navegador; `service_role` y `ADMIN_TOKEN` jamás salen del servidor.
+`NEXT_PUBLIC_SITE_URL` · `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` · `SUPABASE_SERVICE_ROLE_KEY`. Copiar a `.env.local` (gitignoreado). Solo `NEXT_PUBLIC_*` llega al navegador; `service_role` no sale del servidor. `ADMIN_TOKEN` se retiró.
 
 ## 5. Verificación hecha
 `npm run lint` ✓ · `npm run build` ✓ en este cierre. El conteo de entonces (anotado como 19 rutas: 7 properties/journal por slug, sitemap, feed, contribuir, admin, api submissions y embed, más índices) es el de esa build, anterior a `/iniciar-sesion` y `/auth/callback`. La tabla posterior está en `docs/Tech/03-frontend-rutas-render.md`. Rutas con DB ausente responden con fallback o mensajes, sin romper el build.

@@ -41,10 +41,10 @@ test("inactive or malformed members receive no editorial access", () => {
   assert.equal(canManageMembers(null), false);
 });
 
-test("legacy fallback can review and invite", () => {
+test("a legacy-shaped object cannot review or invite", () => {
   const access = { kind: "legacy", member: null };
 
-  assert.equal(canReview(access), true);
-  assert.equal(canInvite(access), true);
+  assert.equal(canReview(access), false);
+  assert.equal(canInvite(access), false);
   assert.equal(canManageMembers(access), false);
 });

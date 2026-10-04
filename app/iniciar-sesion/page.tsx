@@ -3,7 +3,6 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { safeRedirectPath } from "@/lib/safe-redirect";
-import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
@@ -25,26 +24,22 @@ export default function SignInPage() {
       setEmailError("Enter a valid email address, for example name@example.com.");
       return;
     }
-    const supabase = getSupabaseBrowserClient();
-    if (!supabase) {
-      setError("Access is not configured yet.");
-      return;
-    }
-
     const requestedNext = new URLSearchParams(window.location.search).get("next");
     const next = safeRedirectPath(requestedNext, window.location.origin);
-    const { error: authError } = await supabase.auth.signInWithOtp({
-      email: normalizedEmail,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-        shouldCreateUser: false,
-      },
+    const res = await fetch("/api/auth/magic-link", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: normalizedEmail, next }),
     });
-    if (authError) {
-      setError("We could not send the link. Confirm that this email was invited and check that it is spelled correctly.");
+    const json = (await res.json().catch(() => null)) as { message?: string } | null;
+    if (!res.ok) {
+      setError(json?.message ?? "Access is not configured yet.");
       return;
     }
-    setMessage("Check your inbox and spam folder. The sign-in link can only be used once. If it expires, request a new one here.");
+    setMessage(
+      json?.message ??
+        "Check your inbox and spam folder. The sign-in link can only be used once. If it expires, request a new one here.",
+    );
   }
 
   return (

@@ -1,8 +1,9 @@
+import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { createFetchWithTimeout, supabaseFetchTimeoutMs } from "./fetch-with-timeout";
 
-export async function getSupabaseServerClient() {
+export async function getSupabaseServerClient(timeoutMs = supabaseFetchTimeoutMs()) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return null;
@@ -10,7 +11,7 @@ export async function getSupabaseServerClient() {
   const cookieStore = await cookies();
   return createServerClient(url, key, {
     global: {
-      fetch: (input, init) => createFetchWithTimeout(supabaseFetchTimeoutMs())(input, init),
+      fetch: (input, init) => createFetchWithTimeout(timeoutMs)(input, init),
     },
     cookies: {
       getAll() {

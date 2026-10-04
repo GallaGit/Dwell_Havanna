@@ -1,16 +1,13 @@
 import type { NextConfig } from "next";
+import { imageRemotePatterns } from "./lib/image-hosts";
+import { COOP_VALUE, HSTS_VALUE } from "./lib/security-headers";
 
 const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     qualities: [70],
     minimumCacheTTL: 60 * 60 * 24 * 30,
-    remotePatterns: [
-      { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "picsum.photos" },
-      // Supabase Storage (bucket dwell-media) — Fase 1
-      { protocol: "https", hostname: "*.supabase.co" },
-    ],
+    remotePatterns: imageRemotePatterns(process.env.NEXT_PUBLIC_SUPABASE_URL),
   },
   async headers() {
     return [
@@ -20,6 +17,8 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          { key: "Strict-Transport-Security", value: HSTS_VALUE },
+          { key: "Cross-Origin-Opener-Policy", value: COOP_VALUE },
         ],
       },
     ];

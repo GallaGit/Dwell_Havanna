@@ -12,8 +12,8 @@ export function getSupabaseBrowserClient() {
 
   client = createBrowserClient(url, key, {
     global: {
-      // signInWithOtp no usa el timeout corto de lectura: Auth puede tardar
-      // más de 5s en enviar el enlace. 20s evita dejar el formulario colgado.
+      // El login ya no usa este cliente: va por /api/auth/magic-link.
+      // Si un componente de cliente llama a Auth, 20s evita el corte de 5s.
       fetch: createFetchWithTimeout(AUTH_OTP_TIMEOUT_MS),
     },
   });

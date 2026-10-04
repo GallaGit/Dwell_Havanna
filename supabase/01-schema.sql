@@ -5,7 +5,8 @@
 --   3) 04-editorial-permissions.sql
 --   4) migrations/20260921000300_editorial_member_management.sql
 --   5) migrations/20261003150500_private_dwell_media.sql
---   6) 02-seed.sql (opcional)
+--   6) migrations/20261003231500_rls_revoke_rate_limit.sql
+--   7) 02-seed.sql (opcional)
 -- El orden vivo está en scripts/apply-canonical-sql.sh.
 -- dwell-media es privado. Las fotos publicadas van a dwell-published.
 --

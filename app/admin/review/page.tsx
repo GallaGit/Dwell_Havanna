@@ -1,8 +1,16 @@
 import Image from "next/image";
-import { cookies } from "next/headers";
 import { revalidatePath, updateTag } from "next/cache";
+import { SignOutButton } from "@/components/SignOutButton";
 import { PUBLISHED_CONTENT_TAG } from "@/lib/db";
 import { redirect } from "next/navigation";
+import {
+  INVITE_ACTOR_LIMIT,
+  INVITE_ACTOR_WINDOW_SECONDS,
+  consumeRateLimit,
+  hashRateLimitSubject,
+  rateLimitFailure,
+  rateLimitKey,
+} from "@/lib/rate-limit";
 import { contributorInviteDecision } from "@/lib/contributor-invite.mjs";
 import { resolveInviteOrigin } from "@/lib/site";
 import { getServiceClient } from "@/lib/db";
@@ -27,27 +35,24 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const COOKIE = "dh_admin";
-
 function adminInviteRedirect(status: string): never {
   redirect(`/admin/review?invite=${encodeURIComponent(status)}`);
 }
 
-async function login(formData: FormData): Promise<void> {
-  "use server";
-  const token = process.env.ADMIN_TOKEN;
-  const given = String(formData.get("token") ?? "");
-  if (token && given === token) {
-    const store = await cookies();
-    const ttlSeconds = Number(process.env.ADMIN_TOKEN_TTL_SECONDS ?? 60 * 60 * 24 * 7);
-    store.set(COOKIE, token, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: Number.isFinite(ttlSeconds) && ttlSeconds > 0 ? ttlSeconds : 60 * 60 * 24 * 7,
-    });
-  }
-  revalidatePath("/admin/review");
+async function enforceInviteRateLimit(
+  db: NonNullable<ReturnType<typeof getServiceClient>>,
+  actorId: string,
+): Promise<void> {
+  const failure = rateLimitFailure([
+    await consumeRateLimit(
+      db,
+      rateLimitKey("invite:actor", hashRateLimitSubject(actorId)),
+      INVITE_ACTOR_LIMIT,
+      INVITE_ACTOR_WINDOW_SECONDS,
+    ),
+  ]);
+  if (failure === "rate_limited") adminInviteRedirect("rate-limited");
+  if (failure === "rate_limit_unavailable") adminInviteRedirect("rate-unavailable");
 }
 
 async function recordModerationEvent(
@@ -63,8 +68,8 @@ async function recordModerationEvent(
   details: { submissionId?: string; targetHandle?: string; metadata?: Record<string, string> },
 ): Promise<void> {
   await db.from("moderation_events").insert({
-    actor_user_id: access.kind === "member" ? access.member.auth_user_id : null,
-    actor_source: access.kind === "member" ? "auth" : "legacy_admin",
+    actor_user_id: access.member.auth_user_id,
+    actor_source: "auth",
     action,
     submission_id: details.submissionId ?? null,
     target_handle: details.targetHandle ?? null,
@@ -194,6 +199,7 @@ async function inviteContributor(formData: FormData): Promise<void> {
   if (!canInvite(access) || !access) return;
   const db = getServiceClient();
   if (!db) return;
+  await enforceInviteRateLimit(db, access.member.auth_user_id);
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const handle = String(formData.get("handle") ?? "").trim();
@@ -242,7 +248,7 @@ async function inviteContributor(formData: FormData): Promise<void> {
 async function manageEditorialMember(formData: FormData): Promise<void> {
   "use server";
   const access = await getEditorialAccess();
-  if (!canManageMembers(access) || access?.kind !== "member" || access.member.role !== "owner") return;
+  if (!canManageMembers(access) || !access) return;
   const db = getServiceClient();
   if (!db) return;
 
@@ -314,9 +320,10 @@ async function manageEditorialMember(formData: FormData): Promise<void> {
 async function inviteEditorialMember(formData: FormData): Promise<void> {
   "use server";
   const access = await getEditorialAccess();
-  if (!canManageMembers(access) || access?.kind !== "member" || access.member.role !== "owner") return;
+  if (!canManageMembers(access) || !access) return;
   const db = getServiceClient();
   if (!db) return;
+  await enforceInviteRateLimit(db, access.member.auth_user_id);
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role") ?? "moderator");
@@ -367,34 +374,14 @@ export default async function AdminReviewPage({
         <h1 className="font-display text-4xl mb-8">Revisión editorial</h1>
         <p className="max-w-xl text-[15px] leading-7 text-charcoal/85">
            Esta ruta puede abrirse con la URL, pero no muestra la cola ni permite acciones
-           sin una cuenta editorial autorizada. Inicia sesión con una cuenta editorial
-           invitada. El token de emergencia tiene una expiración configurable y solo es
-           un fallback temporal mientras se completa la migración.
+           sin una cuenta editorial autorizada. Inicia sesión con la cuenta owner o
+           moderator invitada.
         </p>
         <div className="mt-8 flex flex-col gap-4 max-w-sm">
           <a href="/iniciar-sesion?next=/admin/review" className="w-fit text-sm bg-ink text-paper px-7 py-3 hover:opacity-80 transition">
             Iniciar sesión editorial
           </a>
-          {process.env.ADMIN_TOKEN && (
-            <form action={login} className="flex flex-col gap-4 border-t rule pt-6">
-              <label htmlFor="emergency-token" className="meta-label">Token de emergencia</label>
-              <input
-                id="emergency-token"
-                name="token"
-                type="password"
-                required
-                autoComplete="current-password"
-                placeholder="Emergency token"
-                className="border border-line bg-transparent px-4 py-3 text-[15px] outline-none focus:border-ink"
-              />
-              <button
-                type="submit"
-                className="w-fit text-sm border border-ink px-7 py-3 hover:bg-ink hover:text-paper transition-colors"
-              >
-                Usar acceso de emergencia
-              </button>
-            </form>
-          )}
+          <SignOutButton label="Cerrar sesión" />
         </div>
       </div>
     );
@@ -442,7 +429,10 @@ export default async function AdminReviewPage({
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 md:px-10 pt-10 md:pt-16 pb-16">
-      <p className="meta-label mb-3">Admin — Cola de revisión</p>
+      <div className="flex items-start justify-between gap-6">
+        <p className="meta-label mb-3">Admin — Cola de revisión</p>
+        <SignOutButton label="Cerrar sesión" />
+      </div>
       <h1 className="font-display text-5xl md:text-6xl leading-[0.95]">
         {pending.length} envío{pending.length === 1 ? "" : "s"} pendiente
         {pending.length === 1 ? "" : "s"}
@@ -475,6 +465,8 @@ export default async function AdminReviewPage({
            {inviteStatus === "send-failed" && "The invitation could not be sent. Confirm the email, Supabase email configuration, and that the address is not already registered."}
            {inviteStatus === "link-failed" && "The email was sent, but the contributor link could not be saved. Do not resend until the account link is checked."}
            {inviteStatus === "member-link-failed" && "The email was sent, but the editorial role could not be saved. Check the team list before sending another invitation."}
+           {inviteStatus === "rate-limited" && "Demasiadas invitaciones seguidas. Espera un rato antes de enviar otra."}
+           {inviteStatus === "rate-unavailable" && "No se pudo anotar el límite de invitaciones. No se envió el correo. Inténtalo de nuevo cuando la base responda."}
          </div>
        )}
 

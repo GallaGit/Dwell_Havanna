@@ -29,7 +29,7 @@ La invitación permite enviar contenido. No publica contenido de forma automáti
 
 ## Permisos editoriales
 
-El panel acepta cuentas `owner` y `moderator` con Supabase Auth. `ADMIN_TOKEN` queda como fallback temporal. Ese fallback puede invitar colaboradores. No puede cambiar roles ni activar o desactivar miembros.
+El panel acepta cuentas `owner` y `moderator` con Supabase Auth. No hay token de emergencia. Solo un `owner` invita colaboradores y gestiona el equipo.
 
 `owner` y `moderator` ya usan una cuenta individual de Supabase. La propietaria otorga o retira esos permisos desde `/admin/review`. Cada moderador usa su propia cuenta. El sistema registra quién aprobó o rechazó cada envío.
 
@@ -42,7 +42,7 @@ El panel acepta cuentas `owner` y `moderator` con Supabase Auth. `ADMIN_TOKEN` q
 
 El orden de implementación está documentado en `docs/PRODUCT/roadmap.md`, sección **Evolución de permisos editoriales**.
 
-El 2026-09-25, en testing, las migraciones editoriales ya estaban aplicadas y había dos `owner` activos. El colaborador E2E sigue siendo colaborador. En producción el esquema estaba aplicado y la fila `owner` de Ociel todavía no existía. Los dos proyectos están pausados desde el 2026-10-03. `ADMIN_TOKEN` sigue como acceso de emergencia.
+El 2026-09-25, en testing, las migraciones editoriales ya estaban aplicadas y había dos `owner` activos. El colaborador E2E sigue siendo colaborador. En producción el esquema estaba aplicado y la fila `owner` de Ociel todavía no existía. Los dos proyectos están pausados desde el 2026-10-03. El token de emergencia ya no está en el código.
 
 ## Para la editora
 
@@ -66,7 +66,7 @@ Si el handle no existe, el formulario de invitación no puede asociar el email c
 
 1. Abre `/admin/review`.
 2. Inicia sesión con la cuenta `owner` en `/iniciar-sesion?next=/admin/review`.
-3. Si esa cuenta no está disponible, usa **Usar acceso de emergencia** e introduce `ADMIN_TOKEN`. El token puede enviar esta invitación. No gestiona el equipo editorial.
+3. Si esa cuenta no está disponible, no hay un token de reserva. Hay que entrar con el `owner`.
 4. Busca la sección **Invitar colaborador**.
 5. Escribe el handle existente, por ejemplo `@arq.habana`.
 6. Escribe el email del colaborador.
@@ -178,7 +178,7 @@ Si la misma cuenta intenta enviar `@otra-persona`, la aplicación responde `403 
 ## Seguridad y privacidad
 
 - No compartas el enlace de acceso.
-- No introduzcas el `ADMIN_TOKEN` en la página de colaboradores.
+- No hay `ADMIN_TOKEN`. No lo pidas ni lo pegues en el formulario.
 - No guardes cookies de sesión en capturas de pantalla ni en mensajes.
 - Usa un proyecto Supabase de testing para las pruebas automatizadas.
 - No uses `E2E_AUTH_COOKIE` contra producción.

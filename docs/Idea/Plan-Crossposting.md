@@ -19,7 +19,7 @@ Decisiones aprobadas por el usuario (2026-09-15):
 - App en la raíz del repositorio: Next 16.3.8 + React 19 + Tailwind 4. Rutas: `/`, `/properties`, `/properties/[slug]`, `/journal`, `/journal/[slug]`, `/about`.
 - Contenido estático en `lib/data.ts`: tipos `Property` y `JournalPost`, arrays `properties` (3), `journalPosts` (4), helpers `getProperty`, `getPost`. Imágenes vía helper `img()` a `images.unsplash.com`.
 - Render: `app/page.tsx` (portada revista), `components/Editorial.tsx` (`SectionHeading`, `PropertyEntry`, `JournalEntry`), detalles con `generateStaticParams()`.
-- `next.config.ts`: `images.remotePatterns` solo permite `images.unsplash.com` y `picsum.photos`. Habrá que añadir el futuro Storage (Supabase) + CDN de Meta.
+- `next.config.ts`: `images.remotePatterns` permite `images.unsplash.com` y el hostname de Supabase del build. Picsum no se usa. Un CDN de Meta, si llega, hay que añadirlo entonces.
 - `app/layout.tsx`: metadata global genérica, sin OG por slug, sin RSS, sin sitemap. Es el primer gap para sindicación pull.
 - No hay DB, auth, admin, API routes, webhooks ni app Meta.
 
@@ -95,7 +95,7 @@ create table syndications (
 );
 ```
 
-Storage: los envíos sin moderar van al bucket privado `dwell-media`. Meta tiene que poder descargar la copia ya publicada en `dwell-published` (`/object/public/dwell-published/<uuid>.jpg`). Una URL firmada corta o una ruta de `dwell-media` falla en el cURL de Meta. `next.config.ts → images.remotePatterns` ya acepta `*.supabase.co`. Regla de ingesta: JPEG ≤ 4 MB, sin EXIF.
+Storage: los envíos sin moderar van al bucket privado `dwell-media`. Meta tiene que poder descargar la copia ya publicada en `dwell-published` (`/object/public/dwell-published/<uuid>.jpg`). Una URL firmada corta o una ruta de `dwell-media` falla en el cURL de Meta. `next.config.ts → images.remotePatterns` acepta el hostname concreto del proyecto, no `*.supabase.co`. Regla de ingesta: JPEG ≤ 4 MB, sin EXIF.
 
 ### 3.2 Capa de datos en Next (migración sin romper UI)
 
@@ -107,7 +107,7 @@ Storage: los envíos sin moderar van al bucket privado `dwell-media`. Meta tiene
 ### 3.3 Rutas nuevas Fase 1
 
 - `GET /contribuir` (formulario ligero, mobile-first, funciona con 3G Cuba): nombre/handle (validado contra `verified_contributors`), foto, título, texto, checkbox obligatorio `rights_granted` ("cedo a Dwell Havana derecho de publicación con crédito"). `POST /api/submissions` guarda + sube imagen a Storage.
-- `/admin/review`: lista `submissions pending` con preview, botones aprobar / rechazar. El plan original creaba un draft en `properties` o `journal_posts`. El código actual, tras la confirmación, inserta solo un post de comunidad con `status='published'`. No crea properties desde la cola. El acceso es una cuenta `owner` o `moderator`. `ADMIN_TOKEN` y la cookie httpOnly quedan como fallback temporal.
+- `/admin/review`: lista `submissions pending` con preview, botones aprobar / rechazar. El plan original creaba un draft en `properties` o `journal_posts`. El código actual, tras la confirmación, inserta solo un post de comunidad con `status='published'`. No crea properties desde la cola. El acceso es una cuenta `owner` o `moderator`. No hay token de emergencia.
 - `GET /feed.xml` (RSS de journal + properties), `GET /sitemap.xml`, `GET /embed/[slug]` (iframe claro para terceros).
 - `generateMetadata()` por slug en `properties/[slug]/page.tsx` y `journal/[slug]/page.tsx`: `title`, `description`, `openGraph.images[0]=cover`, `alternates.canonical=https://dwellhavana.com/...`. Hoy solo hay metadata global en `layout.tsx`.
 
@@ -163,7 +163,7 @@ No requiere código aún, pero bloquea todo lo automático. Responsable: dueña 
 2. `lib/content.ts` + migración static→DB + ISR.
 3. `generateMetadata` OG/canonical + feed + sitemap + embed.
 4. `/contribuir` + `/api/submissions` + allowlist.
-5. `/admin/review` + `ADMIN_TOKEN`.
+5. `/admin/review` con la cuenta `owner`.
 6. Checklist Meta (§4) en paralelo por la dueña.
 7. Recién entonces Fase 2 (syndicate).
 

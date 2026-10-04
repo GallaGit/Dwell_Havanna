@@ -29,6 +29,8 @@ const FRIENDLY: Record<string, string> = {
   unknown_contributor:
     "Your account is not linked to that contributor. Contact us to review your invitation.",
   authentication_required: "Sign in with your invitation before sending.",
+  rate_limited: "Too many submissions from this account. Wait a while and try again.",
+  rate_limit_unavailable: "The submission inbox cannot check its limit right now. Try again later.",
   auth_not_configured: "Contributor access is not configured yet.",
   db_not_configured: "The submission inbox is not available yet. Try again later.",
   upload_failed: "The upload failed. Check your connection and try again.",
