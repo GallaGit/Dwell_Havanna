@@ -1,12 +1,13 @@
+# Dependabot en pausa mientras el proyecto está en pausa (2026-10-04). Para reactivar, volver a poner open-pull-requests-limit: 5.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
